@@ -6,12 +6,15 @@ A Graph-based Retrieval Augmented Generation (GraphRAG) system built with GraphQ
 
 - 🧠 **GraphRAG Architecture**: Combines vector embeddings with graph structure for enhanced retrieval
 - 📊 **Knowledge Graph**: Automatically extracts entities and relationships from documents
+- 🕸️ **Interactive Graph Visualization**: Explore your knowledge graph with Cytoscape.js
 - 🔍 **Multi-Method Retrieval**:
   - Vector similarity search using sentence transformers
   - Graph traversal via shared entities
   - Community detection using Louvain algorithm
 - 💬 **LLM Integration**: Local inference with Ollama
-- 🌐 **Web Interface**: Clean, modern UI for document ingestion and querying
+- 🌐 **Web Interface**: Clean, modern UI with dual-tab design
+  - **Workspace Tab**: Document ingestion and question answering
+  - **Knowledge Graph Tab**: Interactive graph visualization
 - 📁 **Flexible Input**: Support for text input and file uploads
 - 🔒 **Thread-Safe**: Per-request database connections for concurrent request handling
 
@@ -72,11 +75,18 @@ A Graph-based Retrieval Augmented Generation (GraphRAG) system built with GraphQ
    - Use the web interface to add documents via text input or file upload
    - Sample document provided in `input/sample_document.txt`
 
-4. **Ask questions**:
+4. **Explore the knowledge graph**:
+   - Click the "🕸️ Knowledge Graph" tab
+   - View documents (blue nodes) and entities (green nodes)
+   - Click nodes to see details
+   - Try different layout algorithms
+
+5. **Ask questions**:
+   - Return to the "📊 Workspace" tab
    - Enter your question in the query interface
    - The system will retrieve relevant context and generate an answer
 
-5. **Stop the application**:
+6. **Stop the application**:
    ```bash
    ./scripts/stop.sh
    ```
@@ -173,6 +183,13 @@ Content-Type: application/json
 }
 ```
 
+### Get Graph Data
+```bash
+GET /api/graph
+```
+
+Returns the complete knowledge graph structure in Cytoscape.js format with nodes, edges, and statistics.
+
 ## Configuration
 
 ### Change Ollama Model
@@ -191,9 +208,10 @@ port = 8080  # Change to your preferred port
 
 - **GraphQLite**: Graph database on SQLite with Cypher support
 - **sqlite-vec**: Vector similarity search extension for SQLite
-- **Sentence Transformers**: Text embedding generation
-- **Ollama**: Local LLM inference
+- **Sentence Transformers**: Text embedding generation (all-MiniLM-L6-v2)
+- **Ollama**: Local LLM inference (ibm/granite4:3b)
 - **Flask**: Web framework
+- **Cytoscape.js**: Interactive graph visualization library
 - **httpx**: HTTP client for Ollama API
 
 ## Troubleshooting
@@ -229,6 +247,20 @@ See the `Docs/` folder for detailed documentation:
 ## License
 
 This project is provided as-is for educational and research purposes.
+
+## Screenshots
+
+### Workspace Tab
+The main interface for document ingestion and question answering with real-time statistics.
+
+### Knowledge Graph Tab
+Interactive visualization showing:
+- **Blue nodes**: Documents
+- **Green nodes**: Entities
+- **Gray arrows**: MENTIONS relationships
+- **Multiple layouts**: COSE, Circle, Grid, Breadthfirst, Concentric
+- **Node details**: Click any node to view properties
+- **Community detection**: Nodes grouped by topic clusters
 
 ## Acknowledgments
 
