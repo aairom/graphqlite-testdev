@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GraphRAG - Knowledge Graph Q&A</title>
+    <script src="https://unpkg.com/cytoscape@3.28.1/dist/cytoscape.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -372,6 +373,118 @@
         .tab-content.active {
             display: block;
         }
+
+        .main-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid rgba(255,255,255,0.3);
+            max-width: 1200px;
+            margin: 0 auto 20px;
+        }
+
+        .main-tabs .tab {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px 8px 0 0;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: auto;
+            border-bottom: 3px solid transparent;
+        }
+
+        .main-tabs .tab:hover {
+            background: rgba(255,255,255,0.3);
+            transform: none;
+            box-shadow: none;
+        }
+
+        .main-tabs .tab.active {
+            background: white;
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .graph-container {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        #cy {
+            width: 100%;
+            height: 600px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            background: #f9fafb;
+        }
+
+        .graph-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .graph-controls button {
+            width: auto;
+            padding: 8px 16px;
+            font-size: 0.9em;
+        }
+
+        .graph-legend {
+            display: flex;
+            gap: 20px;
+            margin-top: 15px;
+            padding: 15px;
+            background: #f3f4f6;
+            border-radius: 8px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid #333;
+        }
+
+        .legend-color.document {
+            background: #667eea;
+        }
+
+        .legend-color.entity {
+            background: #10b981;
+        }
+
+        .graph-info {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f9fafb;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .graph-info h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .graph-info p {
+            margin: 5px 0;
+            color: #666;
+        }
     </style>
 </head>
 <body>
@@ -402,6 +515,12 @@
             </div>
         </div>
 
+        <div class="main-tabs">
+            <button class="tab active" onclick="switchMainTab('workspace')">📊 Workspace</button>
+            <button class="tab" onclick="switchMainTab('graph')">🕸️ Knowledge Graph</button>
+        </div>
+
+        <div id="workspaceTab" class="tab-content active">
         <div class="main-content">
             <div class="card">
                 <h2><span class="icon">📄</span> Ingest Documents</h2>
@@ -484,6 +603,46 @@
             <div class="result-section">
                 <h3>💡 Answer</h3>
                 <div class="answer-box" id="answerBox"></div>
+            </div>
+        </div>
+        </div>
+
+        <div id="graphTab" class="tab-content">
+            <div class="graph-container">
+                <h2><span class="icon">🕸️</span> Knowledge Graph Visualization</h2>
+                
+                <div class="graph-controls">
+                    <button onclick="refreshGraph()">🔄 Refresh Graph</button>
+                    <button onclick="fitGraph()">🎯 Fit to Screen</button>
+                    <button onclick="resetZoom()">🔍 Reset Zoom</button>
+                    <button onclick="toggleLayout()">📐 Change Layout</button>
+                </div>
+
+                <div id="cy"></div>
+
+                <div class="graph-legend">
+                    <div class="legend-item">
+                        <div class="legend-color document"></div>
+                        <span>Documents</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color entity"></div>
+                        <span>Entities</span>
+                    </div>
+                    <div class="legend-item">
+                        <span>→ MENTIONS relationship</span>
+                    </div>
+                </div>
+
+                <div class="graph-info" id="graphInfo">
+                    <h4>Graph Statistics</h4>
+                    <p id="graphStats">Loading...</p>
+                </div>
+
+                <div class="graph-info" id="nodeInfo" style="display: none;">
+                    <h4>Selected Node</h4>
+                    <p id="nodeDetails"></p>
+                </div>
             </div>
         </div>
     </div>
@@ -686,6 +845,191 @@
                 loading.classList.remove('active');
             }
         });
+
+        // Graph visualization
+        let cy = null;
+        let currentLayout = 'cose';
+
+        function initGraph() {
+            cy = cytoscape({
+                container: document.getElementById('cy'),
+                style: [
+                    {
+                        selector: 'node[type="document"]',
+                        style: {
+                            'background-color': '#667eea',
+                            'label': 'data(label)',
+                            'width': 60,
+                            'height': 60,
+                            'font-size': '12px',
+                            'text-valign': 'center',
+                            'text-halign': 'center',
+                            'color': '#333',
+                            'text-outline-width': 2,
+                            'text-outline-color': '#fff',
+                            'border-width': 3,
+                            'border-color': '#4c51bf'
+                        }
+                    },
+                    {
+                        selector: 'node[type="entity"]',
+                        style: {
+                            'background-color': '#10b981',
+                            'label': 'data(label)',
+                            'width': 40,
+                            'height': 40,
+                            'font-size': '10px',
+                            'text-valign': 'center',
+                            'text-halign': 'center',
+                            'color': '#333',
+                            'text-outline-width': 2,
+                            'text-outline-color': '#fff',
+                            'border-width': 2,
+                            'border-color': '#059669'
+                        }
+                    },
+                    {
+                        selector: 'edge',
+                        style: {
+                            'width': 2,
+                            'line-color': '#cbd5e0',
+                            'target-arrow-color': '#cbd5e0',
+                            'target-arrow-shape': 'triangle',
+                            'curve-style': 'bezier',
+                            'arrow-scale': 1.5
+                        }
+                    },
+                    {
+                        selector: ':selected',
+                        style: {
+                            'border-width': 4,
+                            'border-color': '#f59e0b'
+                        }
+                    }
+                ],
+                layout: {
+                    name: 'cose',
+                    animate: true,
+                    animationDuration: 500
+                }
+            });
+
+            // Node click handler
+            cy.on('tap', 'node', function(evt) {
+                const node = evt.target;
+                const data = node.data();
+                
+                let details = `<strong>ID:</strong> ${data.id}<br>`;
+                details += `<strong>Type:</strong> ${data.type}<br>`;
+                details += `<strong>Label:</strong> ${data.label}<br>`;
+                if (data.content) {
+                    details += `<strong>Content:</strong> ${data.content}...<br>`;
+                }
+                if (data.community !== -1) {
+                    details += `<strong>Community:</strong> ${data.community}<br>`;
+                }
+                
+                document.getElementById('nodeDetails').innerHTML = details;
+                document.getElementById('nodeInfo').style.display = 'block';
+            });
+
+            // Background click handler
+            cy.on('tap', function(evt) {
+                if (evt.target === cy) {
+                    document.getElementById('nodeInfo').style.display = 'none';
+                }
+            });
+        }
+
+        async function refreshGraph() {
+            try {
+                const response = await fetch('/api/graph');
+                const data = await response.json();
+                
+                if (data.error) {
+                    alert('Error loading graph: ' + data.error);
+                    return;
+                }
+
+                if (!cy) {
+                    initGraph();
+                }
+
+                // Update graph
+                cy.elements().remove();
+                cy.add(data.nodes);
+                cy.add(data.edges);
+                
+                // Apply layout
+                cy.layout({
+                    name: currentLayout,
+                    animate: true,
+                    animationDuration: 500
+                }).run();
+
+                // Update stats
+                const stats = data.stats;
+                document.getElementById('graphStats').innerHTML = `
+                    <strong>Documents:</strong> ${stats.documents} |
+                    <strong>Entities:</strong> ${stats.entities} |
+                    <strong>Relationships:</strong> ${stats.relationships} |
+                    <strong>Communities:</strong> ${stats.communities}
+                `;
+            } catch (error) {
+                console.error('Error refreshing graph:', error);
+                alert('Error loading graph: ' + error.message);
+            }
+        }
+
+        function fitGraph() {
+            if (cy) {
+                cy.fit(null, 50);
+            }
+        }
+
+        function resetZoom() {
+            if (cy) {
+                cy.zoom(1);
+                cy.center();
+            }
+        }
+
+        function toggleLayout() {
+            if (!cy) return;
+            
+            const layouts = ['cose', 'circle', 'grid', 'breadthfirst', 'concentric'];
+            const currentIndex = layouts.indexOf(currentLayout);
+            currentLayout = layouts[(currentIndex + 1) % layouts.length];
+            
+            cy.layout({
+                name: currentLayout,
+                animate: true,
+                animationDuration: 500
+            }).run();
+        }
+
+        function switchMainTab(tab) {
+            const tabs = document.querySelectorAll('.main-tabs .tab');
+            const workspaceTab = document.getElementById('workspaceTab');
+            const graphTab = document.getElementById('graphTab');
+            
+            tabs.forEach(t => t.classList.remove('active'));
+            
+            if (tab === 'workspace') {
+                tabs[0].classList.add('active');
+                workspaceTab.classList.add('active');
+                graphTab.classList.remove('active');
+            } else {
+                tabs[1].classList.add('active');
+                workspaceTab.classList.remove('active');
+                graphTab.classList.add('active');
+                
+                // Load graph when switching to graph tab
+                if (!cy) {
+                    refreshGraph();
+                }
+            }
+        }
 
         // Initial status update
         updateStatus();

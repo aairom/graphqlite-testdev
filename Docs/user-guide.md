@@ -56,7 +56,11 @@ Before using the system, ensure you have:
 
 ### Interface Overview
 
-The web interface consists of three main sections:
+The web interface has two main tabs:
+
+#### Workspace Tab (📊)
+
+The primary workspace for document management and Q&A:
 
 1. **Status Bar** (top):
    - Ollama connection status
@@ -72,6 +76,29 @@ The web interface consists of three main sections:
    - Question input
    - Answer display
    - Retrieval information
+
+#### Knowledge Graph Tab (🕸️)
+
+Interactive visualization of your knowledge graph:
+
+1. **Graph Visualization**:
+   - Visual representation of documents and entities
+   - Interactive node exploration
+   - Multiple layout algorithms
+
+2. **Graph Controls**:
+   - Refresh graph data
+   - Fit graph to screen
+   - Reset zoom
+   - Toggle layout algorithms
+
+3. **Graph Statistics**:
+   - Total documents, entities, relationships
+   - Number of detected communities
+
+4. **Node Details**:
+   - Click any node to view its properties
+   - See node type, content, and community assignment
 
 ## Document Ingestion
 
@@ -304,6 +331,114 @@ Cypher query support and graph algorithms...
 3. Check file permissions
 4. Verify disk space
 
+## Visualizing the Knowledge Graph
+
+### Accessing the Graph View
+
+1. Click the **"🕸️ Knowledge Graph"** tab at the top of the page
+2. The graph will automatically load and display
+
+### Understanding the Visualization
+
+**Node Types**:
+- **Blue circles (large)**: Document nodes
+  - Size: 60px diameter
+  - Label: Document title
+  - Click to see content preview
+  
+- **Green circles (medium)**: Entity nodes
+  - Size: 40px diameter
+  - Label: Entity name
+  - Click to see details
+
+**Edges**:
+- **Gray arrows**: MENTIONS relationships
+  - Direction: Document → Entity
+  - Indicates which documents mention which entities
+
+**Colors and Communities**:
+- Nodes are grouped by community (Louvain algorithm)
+- Community ID shown in node details
+- Helps identify topic clusters
+
+### Interacting with the Graph
+
+**Navigation**:
+- **Pan**: Click and drag on empty space
+- **Zoom**: Use mouse wheel or trackpad pinch
+- **Select Node**: Click on any node
+- **Deselect**: Click on empty space
+
+**Controls**:
+- **🔄 Refresh Graph**: Reload graph data from server
+- **🎯 Fit to Screen**: Auto-zoom to show all nodes
+- **🔍 Reset Zoom**: Return to default zoom level
+- **📐 Change Layout**: Cycle through layout algorithms
+
+**Layout Algorithms**:
+1. **COSE** (default): Force-directed physics simulation
+   - Best for: General purpose, natural clustering
+   - Nodes repel each other, edges act as springs
+   
+2. **Circle**: Nodes arranged in a circle
+   - Best for: Small graphs, equal importance
+   
+3. **Grid**: Nodes arranged in a grid pattern
+   - Best for: Organized, structured view
+   
+4. **Breadthfirst**: Hierarchical tree layout
+   - Best for: Showing document-entity hierarchy
+   
+5. **Concentric**: Nodes in concentric circles
+   - Best for: Highlighting central nodes
+
+### Node Details Panel
+
+When you click a node, the details panel shows:
+
+**For Documents**:
+```
+ID: doc:Document_Title
+Type: document
+Label: Document Title
+Content: First 200 characters of content...
+Community: 2
+```
+
+**For Entities**:
+```
+ID: entity:EntityName
+Type: entity
+Label: EntityName
+Community: 2
+```
+
+### Graph Statistics
+
+The statistics panel shows:
+- **Documents**: Total number of document nodes
+- **Entities**: Total number of entity nodes
+- **Relationships**: Total number of MENTIONS edges
+- **Communities**: Number of detected topic clusters
+
+### Use Cases for Graph Visualization
+
+1. **Explore Relationships**: See which documents share entities
+2. **Identify Clusters**: Find groups of related documents
+3. **Verify Ingestion**: Confirm documents were added correctly
+4. **Understand Structure**: Visualize knowledge organization
+5. **Find Gaps**: Identify isolated or under-connected documents
+6. **Community Analysis**: See how documents cluster by topic
+
+### Tips for Graph Exploration
+
+1. **Start with Fit to Screen**: Get an overview before zooming
+2. **Try Different Layouts**: Each reveals different patterns
+3. **Click Nodes**: Explore individual document/entity details
+4. **Look for Clusters**: Dense areas indicate related content
+5. **Check Isolated Nodes**: May indicate unique or unrelated content
+6. **Use Refresh**: Update after ingesting new documents
+
 ## Advanced Usage
 
 ### Using the API Directly
@@ -405,12 +540,30 @@ def _extract_entities(self, text: str) -> list[str]:
 Edit `app.py` to use a different Ollama model:
 
 ```python
-# In initialize_app()
-graphrag = GraphRAG(DB_PATH, model="llama3.2")  # or any Ollama model
+# In app.py
+OLLAMA_MODEL = "llama3.2"  # or any Ollama model
 ```
 
 ### Exporting the Knowledge Graph
 
+**Via API**:
+```python
+import requests
+
+# Get graph data in Cytoscape.js format
+response = requests.get("http://localhost:8080/api/graph")
+graph_data = response.json()
+
+# Save to file
+import json
+with open("graph_export.json", "w") as f:
+    json.dump(graph_data, f, indent=2)
+
+print(f"Exported {graph_data['stats']['documents']} documents")
+print(f"Exported {graph_data['stats']['entities']} entities")
+```
+
+**Direct Database Access**:
 ```python
 from graphqlite import graph
 
@@ -427,6 +580,49 @@ for entity in entities:
     print(entity)
 
 g.close()
+```
+
+### Visualizing Graph Data Externally
+
+Export graph data for use in other tools:
+
+```python
+import requests
+import json
+
+# Get graph data
+response = requests.get("http://localhost:8080/api/graph")
+data = response.json()
+
+# Convert to GraphML format (example)
+def to_graphml(graph_data):
+    nodes = graph_data['nodes']
+    edges = graph_data['edges']
+    
+    graphml = ['<?xml version="1.0" encoding="UTF-8"?>']
+    graphml.append('<graphml>')
+    graphml.append('<graph edgedefault="directed">')
+    
+    # Add nodes
+    for node in nodes:
+        node_id = node['data']['id']
+        label = node['data']['label']
+        graphml.append(f'  <node id="{node_id}" label="{label}"/>')
+    
+    # Add edges
+    for edge in edges:
+        source = edge['data']['source']
+        target = edge['data']['target']
+        graphml.append(f'  <edge source="{source}" target="{target}"/>')
+    
+    graphml.append('</graph>')
+    graphml.append('</graphml>')
+    return '\n'.join(graphml)
+
+# Save as GraphML
+graphml_content = to_graphml(data)
+with open("knowledge_graph.graphml", "w") as f:
+    f.write(graphml_content)
 ```
 
 ## Tips for Success

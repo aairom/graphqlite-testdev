@@ -6,13 +6,14 @@ A Graph-based Retrieval Augmented Generation (GraphRAG) system built with GraphQ
 
 - 🧠 **GraphRAG Architecture**: Combines vector embeddings with graph structure for enhanced retrieval
 - 📊 **Knowledge Graph**: Automatically extracts entities and relationships from documents
-- 🔍 **Multi-Method Retrieval**: 
+- 🔍 **Multi-Method Retrieval**:
   - Vector similarity search using sentence transformers
   - Graph traversal via shared entities
   - Community detection using Louvain algorithm
 - 💬 **LLM Integration**: Local inference with Ollama
 - 🌐 **Web Interface**: Clean, modern UI for document ingestion and querying
 - 📁 **Flexible Input**: Support for text input and file uploads
+- 🔒 **Thread-Safe**: Per-request database connections for concurrent request handling
 
 ## Architecture
 
@@ -50,8 +51,8 @@ A Graph-based Retrieval Augmented Generation (GraphRAG) system built with GraphQ
    # Start Ollama
    ollama serve
    
-   # Pull a model (recommended: qwen2.5:3b for speed)
-   ollama pull qwen2.5:3b
+   # Pull a model (recommended: ibm/granite4:3b for speed and quality)
+   ollama pull ibm/granite4:3b
    ```
 
 ## Quick Start
@@ -175,9 +176,9 @@ Content-Type: application/json
 ## Configuration
 
 ### Change Ollama Model
-Edit `app.py` and modify the model parameter:
+Edit `app.py` and modify the `OLLAMA_MODEL` constant:
 ```python
-graphrag = GraphRAG(DB_PATH, model="llama3.2")  # or any other Ollama model
+OLLAMA_MODEL = "llama3.2"  # or any other Ollama model
 ```
 
 ### Change Port
@@ -200,7 +201,7 @@ port = 8080  # Change to your preferred port
 ### Ollama Not Available
 - Ensure Ollama is running: `ollama serve`
 - Check if a model is installed: `ollama list`
-- Pull a model if needed: `ollama pull qwen2.5:3b`
+- Pull a model if needed: `ollama pull ibm/granite4:3b`
 
 ### Import Errors
 - Run `./scripts/stop.sh` to reinstall dependencies
@@ -210,6 +211,12 @@ port = 8080  # Change to your preferred port
 ### Database Issues
 - Delete `knowledge_graph.db` to start fresh
 - Check file permissions in the project directory
+
+### Threading Errors (Fixed)
+- The application now uses per-request database connections
+- Each Flask request gets its own SQLite connection via Flask's `g` object
+- Connections are automatically cleaned up after each request
+- No manual intervention needed for concurrent requests
 
 ## Documentation
 

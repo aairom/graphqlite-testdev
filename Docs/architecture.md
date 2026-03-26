@@ -54,31 +54,49 @@ graph TB
 #### Flask Application (`app.py`)
 - **Purpose**: Serves the web interface and REST API
 - **Port**: 8080 (configurable)
+- **Threading Model**: Per-request database connections using Flask's `g` object
 - **Features**:
   - Single-page application with modern UI
   - Real-time status updates
   - File upload support
   - Responsive design
+  - Thread-safe request handling
+  - Interactive graph visualization
 
 #### Web Interface (`templates/index.html`)
-- **Technology**: HTML5, CSS3, Vanilla JavaScript
+- **Technology**: HTML5, CSS3, Vanilla JavaScript, Cytoscape.js
 - **Features**:
-  - Document ingestion (text input and file upload)
-  - Question answering interface
-  - Real-time statistics display
-  - Retrieval visualization
+  - **Workspace Tab**:
+    - Document ingestion (text input and file upload)
+    - Question answering interface
+    - Real-time statistics display
+    - Retrieval visualization
+  - **Knowledge Graph Tab**:
+    - Interactive graph visualization with Cytoscape.js
+    - Visual representation of documents (blue nodes) and entities (green nodes)
+    - MENTIONS relationships shown as directed edges
+    - Multiple layout algorithms (cose, circle, grid, breadthfirst, concentric)
+    - Node selection and inspection
+    - Community detection visualization
+    - Graph controls (refresh, fit, zoom, layout toggle)
 
 ### 2. Application Layer
 
 #### GraphRAG Engine
 The core query processing engine that orchestrates retrieval and generation.
 
-**Key Methods**:
+**Architecture**: Functional design with per-request database connections
+- Each Flask request gets its own GraphQLite connection via `get_graph()`
+- Connections automatically closed after request via `@app.teardown_appcontext`
+- Thread-safe shared resources: embedding model and Ollama client
+
+**Key Functions**:
+- `get_graph()`: Get or create per-request database connection
 - `vector_search()`: Finds similar documents using embeddings
 - `get_related_documents()`: Traverses graph via shared entities
 - `get_community_documents()`: Finds documents in same community
 - `build_context()`: Combines all retrieval methods
-- `query()`: End-to-end question answering
+- `query_graphrag()`: End-to-end question answering
 
 **Retrieval Pipeline**:
 ```
@@ -154,7 +172,7 @@ REST API client for local LLM inference.
 - Health checking
 - Configurable timeout and temperature
 
-**Default Model**: qwen2.5:3b (fast, efficient)
+**Default Model**: ibm/granite4:3b (fast, efficient, 3.4B parameters)
 
 ## Data Flow
 
@@ -247,16 +265,24 @@ sequenceDiagram
 
 ## Performance Considerations
 
+### Threading and Concurrency
+- **Per-Request Connections**: Each Flask request gets its own SQLite connection
+- **Thread Safety**: Embedding model and Ollama client are thread-safe and shared
+- **Connection Pooling**: Automatic via Flask's application context
+- **No Global State**: Community detection cached per-request only
+
 ### Scalability
 - **Documents**: Tested up to 10,000 documents
 - **Entities**: Scales with document count
 - **Query Time**: 1-3 seconds typical (including LLM)
+- **Concurrent Requests**: Supports multiple simultaneous requests
 
 ### Optimization Strategies
-1. **Embedding Caching**: Embeddings stored once
-2. **Community Caching**: Louvain results cached until graph changes
+1. **Embedding Caching**: Embeddings stored once in sqlite-vec
+2. **Community Caching**: Louvain results cached per-request (invalidated on graph changes)
 3. **Batch Processing**: Documents can be ingested in batches
 4. **Index Usage**: SQLite indexes on node/edge tables
+5. **Connection Management**: Automatic cleanup prevents resource leaks
 
 ### Resource Usage
 - **Memory**: ~500MB for model + embeddings
@@ -278,17 +304,18 @@ sequenceDiagram
 ## Extension Points
 
 ### Adding New Retrieval Methods
-Implement in `GraphRAG` class:
+Implement as a new function:
 ```python
-def custom_retrieval(self, query: str) -> list[dict]:
+def custom_retrieval(query: str) -> list[dict]:
+    g = get_graph()  # Get per-request connection
     # Your retrieval logic
     return results
 ```
 
 ### Custom Entity Extraction
-Replace `_extract_entities()` method:
+Replace `extract_entities()` function:
 ```python
-def _extract_entities(self, text: str) -> list[str]:
+def extract_entities(text: str) -> list[str]:
     # Use NER, spaCy, or other methods
     return entities
 ```
@@ -327,11 +354,59 @@ class CustomLLMClient:
 - Error tracking in Flask
 - Ollama connection status
 
+## Graph Visualization
+
+### Interactive Visualization (Cytoscape.js)
+
+The application includes an interactive knowledge graph visualization powered by Cytoscape.js.
+
+**Features**:
+- **Visual Elements**:
+  - Document nodes: Large blue circles (60px)
+  - Entity nodes: Medium green circles (40px)
+  - MENTIONS edges: Gray arrows connecting documents to entities
+  - Selected nodes: Orange border highlight
+
+- **Layouts**:
+  - **COSE** (default): Force-directed layout with physics simulation
+  - **Circle**: Nodes arranged in a circle
+  - **Grid**: Nodes arranged in a grid pattern
+  - **Breadthfirst**: Hierarchical tree layout
+  - **Concentric**: Nodes arranged in concentric circles
+
+- **Interactions**:
+  - Click nodes to view details (ID, type, content, community)
+  - Drag nodes to reposition
+  - Zoom and pan with mouse/trackpad
+  - Fit graph to screen
+  - Reset zoom to default
+
+- **Community Visualization**:
+  - Nodes colored by community (from Louvain algorithm)
+  - Community ID displayed in node details
+  - Statistics show total number of communities
+
+**API Endpoint**: `GET /api/graph`
+- Returns nodes, edges, and statistics in Cytoscape.js format
+- Includes community assignments for each node
+- Content truncated to 200 characters for display
+
+**Performance**:
+- Handles graphs with hundreds of nodes efficiently
+- Animated layout transitions (500ms)
+- Lazy loading: Graph only loaded when tab is opened
+
 ## Future Enhancements
 
-1. **Advanced Entity Extraction**: Use NER models
-2. **Multi-hop Reasoning**: Explicit reasoning chains
-3. **Caching Layer**: Redis for query results
-4. **Batch Queries**: Process multiple questions
-5. **Graph Visualization**: Interactive graph explorer
-6. **Export/Import**: Knowledge graph backup/restore
+1. **Advanced Entity Extraction**: Use NER models (spaCy, Hugging Face)
+2. **Multi-hop Reasoning**: Explicit reasoning chains in graph
+3. **Caching Layer**: Redis for query results and graph data
+4. **Batch Queries**: Process multiple questions simultaneously
+5. **Enhanced Graph Visualization**:
+   - Node filtering by type or community
+   - Edge weight visualization
+   - Subgraph extraction
+   - Export to GraphML/GEXF formats
+   - Time-based graph evolution
+6. **Export/Import**: Knowledge graph backup/restore functionality
+7. **Graph Analytics Dashboard**: Centrality metrics, clustering coefficients

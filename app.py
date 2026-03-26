@@ -505,6 +505,79 @@ def query():
     return jsonify(result)
 
 
+@app.route('/api/graph', methods=['GET'])
+def get_graph_data():
+    """Export the knowledge graph structure for visualization."""
+    try:
+        g = get_graph()
+        
+        # Get all documents
+        doc_query = "MATCH (n:Document) RETURN n.id AS id, n.title AS title, n.content AS content"
+        doc_result = g.connection.cypher(doc_query)
+        
+        # Get all entities
+        entity_query = "MATCH (n:Entity) RETURN n.id AS id, n.name AS name"
+        entity_result = g.connection.cypher(entity_query)
+        
+        # Get all relationships
+        edge_query = "MATCH (d:Document)-[r:MENTIONS]->(e:Entity) RETURN d.id AS source, e.id AS target"
+        edge_result = g.connection.cypher(edge_query)
+        
+        # Get communities
+        communities = get_communities()
+        
+        # Build nodes array
+        nodes = []
+        for doc in doc_result:
+            doc_id = doc.get("id")
+            nodes.append({
+                "data": {
+                    "id": doc_id,
+                    "label": doc.get("title", "Unknown"),
+                    "type": "document",
+                    "content": doc.get("content", "")[:200],  # Truncate for display
+                    "community": communities.get(doc_id, -1)
+                }
+            })
+        
+        for entity in entity_result:
+            entity_id = entity.get("id")
+            nodes.append({
+                "data": {
+                    "id": entity_id,
+                    "label": entity.get("name", "Unknown"),
+                    "type": "entity",
+                    "community": communities.get(entity_id, -1)
+                }
+            })
+        
+        # Build edges array
+        edges = []
+        for edge in edge_result:
+            edges.append({
+                "data": {
+                    "source": edge.get("source"),
+                    "target": edge.get("target"),
+                    "label": "MENTIONS"
+                }
+            })
+        
+        return jsonify({
+            "nodes": nodes,
+            "edges": edges,
+            "stats": {
+                "documents": len([n for n in nodes if n["data"]["type"] == "document"]),
+                "entities": len([n for n in nodes if n["data"]["type"] == "entity"]),
+                "relationships": len(edges),
+                "communities": len(set(communities.values()))
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Error exporting graph: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 def initialize_app():
     """Initialize the application."""
     global embed_model, ollama_client

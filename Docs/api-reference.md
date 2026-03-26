@@ -237,6 +237,86 @@ curl -X POST http://localhost:8080/api/query \
 
 ---
 
+### Get Graph Data
+
+Export the knowledge graph structure for visualization.
+
+**Endpoint**: `GET /api/graph`
+
+**Response**:
+```json
+{
+  "nodes": [
+    {
+      "data": {
+        "id": "doc:Document_Title",
+        "label": "Document Title",
+        "type": "document",
+        "content": "Document content (truncated to 200 chars)",
+        "community": 2
+      }
+    },
+    {
+      "data": {
+        "id": "entity:EntityName",
+        "label": "EntityName",
+        "type": "entity",
+        "community": 2
+      }
+    }
+  ],
+  "edges": [
+    {
+      "data": {
+        "source": "doc:Document_Title",
+        "target": "entity:EntityName",
+        "label": "MENTIONS"
+      }
+    }
+  ],
+  "stats": {
+    "documents": 10,
+    "entities": 45,
+    "relationships": 120,
+    "communities": 5
+  }
+}
+```
+
+**Response Fields**:
+- `nodes`: Array of graph nodes (documents and entities)
+  - `id`: Unique node identifier
+  - `label`: Display label for the node
+  - `type`: Node type ("document" or "entity")
+  - `content`: Document content preview (documents only)
+  - `community`: Community ID from Louvain algorithm
+- `edges`: Array of graph edges (relationships)
+  - `source`: Source node ID
+  - `target`: Target node ID
+  - `label`: Edge type (always "MENTIONS")
+- `stats`: Graph statistics
+  - `documents`: Total number of document nodes
+  - `entities`: Total number of entity nodes
+  - `relationships`: Total number of edges
+  - `communities`: Number of detected communities
+
+**Status Codes**:
+- `200 OK`: Graph data retrieved successfully
+- `500 Internal Server Error`: Error exporting graph
+
+**Example**:
+```bash
+curl -X GET http://localhost:8080/api/graph
+```
+
+**Use Cases**:
+- Interactive graph visualization with Cytoscape.js
+- Graph analysis and exploration
+- Community structure visualization
+- Export for external graph tools
+
+---
+
 ## Data Models
 
 ### Document Node
@@ -408,6 +488,14 @@ print(client.health())
 client.ingest("Test Doc", "This is a test document")
 result = client.query("What is this about?")
 print(result["answer"])
+
+    def get_graph(self):
+        return requests.get(f"{self.base_url}/api/graph").json()
+
+# Usage with graph visualization
+graph_data = client.get_graph()
+print(f"Graph has {graph_data['stats']['documents']} documents")
+print(f"Graph has {graph_data['stats']['communities']} communities")
 ```
 
 ---
