@@ -43,21 +43,23 @@ ollama list
 ### Pulling Models
 
 ```bash
-# Pull a specific model
-ollama pull qwen2.5:3b
+# Pull the recommended model (currently used by the application)
+ollama pull ibm/granite4:3b
 
 # Other recommended models
 ollama pull llama3.2        # Meta's Llama 3.2
 ollama pull mistral         # Mistral 7B
 ollama pull phi3            # Microsoft Phi-3
+ollama pull qwen2.5:3b      # Qwen 2.5 3B
 ```
 
 ### Recommended Models
 
 | Model | Size | Speed | Quality | Use Case |
 |-------|------|-------|---------|----------|
-| qwen2.5:3b | 3B | ⚡⚡⚡ | ⭐⭐⭐ | Fast responses, good quality |
+| ibm/granite4:3b | 3.4B | ⚡⚡⚡ | ⭐⭐⭐⭐ | **Default** - Fast, high quality (currently used) |
 | llama3.2 | 3B | ⚡⚡⚡ | ⭐⭐⭐ | Balanced performance |
+| qwen2.5:3b | 3B | ⚡⚡⚡ | ⭐⭐⭐ | Fast responses, good quality |
 | mistral | 7B | ⚡⚡ | ⭐⭐⭐⭐ | Better quality, slower |
 | qwen3:8b | 8B | ⚡⚡ | ⭐⭐⭐⭐ | High quality, slower |
 
@@ -75,10 +77,8 @@ ollama rm qwen3:8b
 Edit `app.py` and modify the model parameter:
 
 ```python
-def initialize_app():
-    global graphrag
-    # Change the model here
-    graphrag = GraphRAG(DB_PATH, model="llama3.2")
+# In app.py, change the OLLAMA_MODEL constant
+OLLAMA_MODEL = "llama3.2"  # Change from default "ibm/granite4:3b"
 ```
 
 ### Changing the Ollama URL
@@ -90,8 +90,8 @@ If Ollama is running on a different host or port:
 class OllamaClient:
     def __init__(
         self,
-        model: str = "qwen2.5:3b",
-        base_url: str = "http://localhost:11434",  # Change this
+        model: str = "ibm/granite4:3b",  # Default model
+        base_url: str = "http://localhost:11434",  # Change this if needed
         timeout: float = 120.0,
     ):
 ```
@@ -128,7 +128,7 @@ from ollama_client import OllamaClient, Message
 
 # Initialize client
 client = OllamaClient(
-    model="qwen2.5:3b",
+    model="ibm/granite4:3b",  # or any other Ollama model
     base_url="http://localhost:11434",
     timeout=120.0
 )
@@ -217,11 +217,12 @@ Instructions:
 Choose models based on your hardware:
 
 **Low-end Hardware** (8GB RAM):
-- qwen2.5:3b
+- ibm/granite4:3b (recommended)
+- llama3.2
 - phi3:mini
-- llama3.2:1b
 
 **Mid-range Hardware** (16GB RAM):
+- ibm/granite4:3b (recommended)
 - qwen2.5:3b
 - llama3.2
 - mistral
@@ -284,13 +285,13 @@ df -h
 
 **Retry download**:
 ```bash
-ollama pull qwen2.5:3b
+ollama pull ibm/granite4:3b
 ```
 
 ### Slow Responses
 
 **Solutions**:
-1. Use a smaller model (qwen2.5:3b instead of qwen3:8b)
+1. Use a smaller model (ibm/granite4:3b or llama3.2 instead of qwen3:8b)
 2. Reduce context length
 3. Enable GPU acceleration
 4. Increase timeout setting
@@ -341,7 +342,7 @@ payload = {
 ```python
 class MultiModelClient:
     def __init__(self):
-        self.fast_model = OllamaClient(model="qwen2.5:3b")
+        self.fast_model = OllamaClient(model="ibm/granite4:3b")
         self.quality_model = OllamaClient(model="qwen3:8b")
     
     def chat(self, messages, use_quality=False):
@@ -353,7 +354,7 @@ class MultiModelClient:
 
 ```python
 def chat_with_fallback(messages):
-    models = ["qwen3:8b", "qwen2.5:3b", "llama3.2"]
+    models = ["ibm/granite4:3b", "qwen3:8b", "llama3.2"]
     
     for model in models:
         try:
@@ -400,7 +401,7 @@ import asyncio
 import httpx
 
 class AsyncOllamaClient:
-    def __init__(self, model="qwen2.5:3b"):
+    def __init__(self, model="ibm/granite4:3b"):
         self.model = model
         self.base_url = "http://localhost:11434"
         self.client = httpx.AsyncClient(timeout=120.0)
@@ -431,7 +432,7 @@ asyncio.run(main())
 ### Batch Processing
 
 ```python
-def batch_chat(questions, model="qwen2.5:3b"):
+def batch_chat(questions, model="ibm/granite4:3b"):
     client = OllamaClient(model=model)
     results = []
     
@@ -448,7 +449,7 @@ def batch_chat(questions, model="qwen2.5:3b"):
 
 ## Best Practices
 
-1. **Model Selection**: Start with qwen2.5:3b for speed, upgrade if needed
+1. **Model Selection**: Start with ibm/granite4:3b (default) for best balance of speed and quality
 2. **Temperature**: Use 0.3 for factual answers, 0.7 for creative responses
 3. **Context Length**: Keep context under 2000 tokens for best performance
 4. **Error Handling**: Always implement fallback strategies
