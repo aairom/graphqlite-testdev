@@ -1,0 +1,45 @@
+# Frequently Asked Questions
+
+## General Product Questions
+
+### Q: What warranty comes with your products?
+A: Most of our healthcare and wellness devices come with a 2-year limited warranty covering manufacturing defects. Enterprise solutions typically include service level agreements with defined support terms. Please check the specific product documentation for detailed warranty information.
+
+### Q: Do your products comply with data privacy regulations?
+A: Yes, all of our products are designed with privacy as a priority. Our healthcare products comply with HIPAA regulations in the US and GDPR in Europe. Our enterprise solutions include robust data protection features and all necessary compliance documentation.
+
+### Q: How do I return a product?
+A: Products can be returned within 30 days of purchase for a full refund. Healthcare devices must be unopened for hygienic reasons unless there is a defect. Please contact customer support to initiate the return process.
+
+## Healthcare Products
+
+### Q: Is the Premium Health Monitor (P001) covered by insurance?
+A: Coverage varies by insurance provider and plan. Many insurance companies offer partial reimbursement with a prescription from a healthcare provider. We provide necessary documentation to submit to your insurance company for potential reimbursement.
+
+### Q: How accurate is the Advanced Glucose Meter (P002)?
+A: The Advanced Glucose Meter exceeds ISO 15197:2013 requirements for accuracy. In clinical testing, 99% of readings were within ±10% of laboratory reference values for glucose concentrations above 100 mg/dL and within ±10 mg/dL for glucose concentrations below 100 mg/dL.
+
+### Q: Can the Remote Patient Monitoring System (P007) integrate with our hospital's electronic health record system?
+A: Yes, our Remote Patient Monitoring System integrates with all major electronic health record systems including Epic, Cerner, Allscripts, and Meditech. We provide full implementation support for system integration.
+
+## Wellness Products
+
+### Q: How are the vitamin formulations in the Daily Vitamin Subscription (P004) determined?
+A: Formulations are based on quarterly blood tests that measure key biomarkers, along with a health questionnaire covering lifestyle factors, dietary patterns, and health goals. Our algorithm creates a personalized formula that is reviewed by our nutrition team before fulfillment.
+
+### Q: Is the Fitness Tracking Band (P006) waterproof?
+A: The Fitness Tracking Band is water-resistant to 50 meters and can be worn while swimming in pools and open water. It should be rinsed with fresh water after exposure to saltwater or chlorine.
+
+### Q: How does the Smart Scale (P013) differentiate between users?
+A: The Smart Scale uses a combination of weight history, body composition metrics, and foot placement patterns to automatically identify up to 8 different users. In case of similar profiles, the scale will prompt for user confirmation via the connected app.
+
+## Enterprise Solutions
+
+### Q: How do you measure ROI for the Corporate Wellness Program (P024)?
+A: Our ROI calculation includes multiple factors: healthcare cost trends, absenteeism rates, productivity measures, and employee engagement metrics. We establish baseline measurements before program implementation and track changes quarterly. Our Enterprise Health Analytics Platform provides detailed ROI reports with both financial and non-financial outcomes.
+
+### Q: What support do you provide for implementing the Healthcare Provider Integration Suite (P026)?
+A: Implementation includes a dedicated project manager, technical integration team, and clinical consultant. We provide comprehensive training for both administrative and clinical staff, documentation for compliance purposes, and ongoing technical support. Typical implementation timeframes range from 6-12 weeks depending on system complexity.
+
+### Q: How do you ensure employee privacy with the Employee Health Screening Package (P025)?
+A: We follow strict privacy protocols that comply with all relevant regulations. Individual health data is never shared with employers. Employers only receive aggregated, anonymized population health reports. Employees have complete control over their personal health information and must provide explicit consent for any data sharing with healthcare providers.

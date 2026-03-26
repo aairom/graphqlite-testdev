@@ -1,0 +1,47 @@
+# Wellness Products Overview
+
+Our wellness product line is designed to support overall health and wellbeing through preventative care, lifestyle management, and mental health support.
+
+## Daily Vitamin Subscription (P004)
+The Daily Vitamin Subscription service delivers personalized vitamin packs based on individual health assessments. Each subscription includes quarterly blood tests to measure nutrient levels and adjust formulations accordingly. Our proprietary algorithm considers over 30 biomarkers to create truly personalized supplementation plans.
+
+Key benefits:
+- Personalized formulations based on individual needs
+- Convenient daily packs delivered monthly
+- Quarterly reassessment and formula adjustments
+- Access to nutrition consultants
+- Integration with our health tracking platform
+
+## Fitness Tracking Band (P006)
+Our Fitness Tracking Band offers comprehensive activity monitoring with specialized tracking for over 40 different exercises. The device features:
+- 7-day battery life
+- Water resistance to 50 meters
+- Heart rate zone training
+- Sleep quality analysis
+- Stress level monitoring based on heart rate variability
+- Guided breathing exercises
+
+The band syncs with our wellness platform to provide personalized workout recommendations and progress tracking.
+
+## Nutritional Supplement Bundle (P011)
+The Nutritional Supplement Bundle includes our most popular supplements formulated to support overall wellness. All supplements undergo rigorous third-party testing for purity and potency. The bundle includes:
+- Omega-3 complex sourced from sustainable algae
+- Probiotic blend with 12 clinically-studied strains
+- Comprehensive multivitamin with bioavailable forms
+- Adaptogenic herb blend for stress support
+- Vitamin D3+K2 in optimal ratios
+
+## Smart Scale with Body Composition (P013)
+The Smart Scale measures weight, body fat percentage, muscle mass, bone density, and hydration levels using bioelectrical impedance analysis. The scale recognizes up to 8 different users automatically and syncs data wirelessly to our wellness platform. Trend analysis provides insights into how lifestyle changes affect body composition over time.
+
+## Stress Management Program (P014)
+Our Stress Management Program combines digital tools with personalized coaching to help users reduce stress and build resilience. The program includes:
+- Biofeedback training using our sensors
+- Personalized meditation library
+- Sleep improvement strategies
+- Cognitive behavioral techniques
+- Quarterly sessions with a wellness coach
+- Progress tracking and adaptive recommendations
+
+## Meditation App Premium (P016)
+The Meditation App Premium subscription provides access to over 500 guided meditations, sleep stories, and breathing exercises led by renowned mindfulness experts. Content is organized into programs targeting specific needs such as stress reduction, focus enhancement, and sleep improvement. The app features offline access and integration with our other wellness products to provide a holistic approach to mental wellbeing.
