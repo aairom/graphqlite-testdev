@@ -1,543 +1,448 @@
 # User Guide
 
-Complete guide for using the GraphQLite + Ollama Chat Application.
+Complete guide to using the GraphRAG Knowledge System.
 
 ## Table of Contents
 
 1. [Getting Started](#getting-started)
-2. [Using the Web Interface](#using-the-web-interface)
-3. [Working with Conversations](#working-with-conversations)
-4. [Using the GraphQL API](#using-the-graphql-api)
-5. [Troubleshooting](#troubleshooting)
-6. [Tips and Best Practices](#tips-and-best-practices)
-
----
+2. [Document Ingestion](#document-ingestion)
+3. [Querying the System](#querying-the-system)
+4. [Understanding Results](#understanding-results)
+5. [Best Practices](#best-practices)
+6. [Troubleshooting](#troubleshooting)
+7. [Advanced Usage](#advanced-usage)
 
 ## Getting Started
 
 ### Prerequisites
 
-Before you begin, ensure you have:
+Before using the system, ensure you have:
 
-1. **Python 3.8 or higher** installed
-   ```bash
-   python3 --version
-   ```
-
+1. **Python 3.10 or higher** installed
 2. **Ollama** installed and running
    ```bash
-   # Install Ollama (if not already installed)
-   # Visit: https://ollama.ai/
+   # Install Ollama from https://ollama.ai
    
-   # Start Ollama
+   # Start Ollama server
    ollama serve
    
-   # Pull a model (if needed)
-   ollama pull llama2
+   # Pull a model (recommended: qwen2.5:3b)
+   ollama pull qwen2.5:3b
    ```
 
-3. **Git** (optional, for version control)
+### First-Time Setup
+
+1. **Navigate to the project directory**:
    ```bash
-   git --version
+   cd graphqlite-testdev
    ```
 
-### Installation
-
-1. **Navigate to the project directory**
+2. **Run the setup script**:
    ```bash
-   cd /path/to/graphqlite-testdev
+   ./scripts/stop.sh
    ```
+   This will:
+   - Create a Python virtual environment
+   - Install all required dependencies
+   - Set up the project structure
 
-2. **Start the application**
+3. **Start the application**:
    ```bash
    ./scripts/start.sh
    ```
+   The application will start at: http://localhost:8080
 
-   The script will:
-   - Create a Python virtual environment
-   - Install all dependencies
-   - Check Ollama connection
-   - Start the application
-   - Display the application URL
+4. **Open your browser** and navigate to http://localhost:8080
 
-3. **Access the application**
-   
-   Open your web browser and navigate to:
-   ```
-   http://localhost:8080
-   ```
+### Interface Overview
 
----
+The web interface consists of three main sections:
 
-## Using the Web Interface
+1. **Status Bar** (top):
+   - Ollama connection status
+   - Document count
+   - Entity count
+   - Relationship count
 
-### Overview
+2. **Ingest Documents** (left panel):
+   - Text input tab
+   - File upload tab
 
-The web interface consists of two main sections:
+3. **Ask Questions** (right panel):
+   - Question input
+   - Answer display
+   - Retrieval information
 
-1. **Sidebar** (Left): Conversation list and controls
-2. **Main Area** (Right): Chat interface
+## Document Ingestion
 
-### Interface Components
+### Method 1: Text Input
 
-#### 1. Sidebar Header
+1. Click on the **"Text Input"** tab in the Ingest Documents panel
+2. Enter a **document title**
+3. Enter or paste the **document content**
+4. Click **"Ingest Document"**
 
-- **Title**: "🤖 GraphQLite Chat"
-- **New Chat Button**: Create a new conversation
-- **Model Selector**: Choose the AI model (Llama 2, Mistral, Code Llama)
-
-#### 2. Conversation List
-
-- Shows all your conversations
-- Displays conversation title and message count
-- Click to select and view a conversation
-- Active conversation is highlighted
-
-#### 3. Chat Header
-
-- Shows current conversation title
-- Displays connection status:
-  - 🟢 **Ollama Connected**: Ready to chat
-  - 🔴 **Ollama Disconnected**: Check Ollama service
-
-#### 4. Message Area
-
-- Displays conversation messages
-- User messages appear on the right (purple)
-- AI responses appear on the left (white)
-- Auto-scrolls to latest message
-
-#### 5. Input Area
-
-- Text input field for your messages
-- Send button to submit messages
-- Press Enter to send quickly
-
----
-
-## Working with Conversations
-
-### Creating a New Conversation
-
-1. Click the **"+ New Chat"** button in the sidebar
-2. Enter a title for your conversation (e.g., "Python Help")
-3. Click OK
-4. The new conversation appears in the sidebar and is automatically selected
-
-**Tip**: Choose descriptive titles to easily find conversations later.
-
-### Selecting a Conversation
-
-1. Click on any conversation in the sidebar
-2. The conversation loads in the main area
-3. All previous messages are displayed
-4. You can continue the conversation
-
-### Sending Messages
-
-1. Ensure a conversation is selected
-2. Type your message in the input field at the bottom
-3. Click **"Send"** or press **Enter**
-4. Your message appears immediately
-5. Wait for the AI response (may take a few seconds)
-6. The AI response appears below your message
-
-**Example Messages:**
-- "What is GraphQL?"
-- "Explain Python decorators"
-- "Write a function to sort a list"
-- "Help me debug this code: [paste code]"
-
-### Choosing AI Models
-
-Different models have different strengths:
-
-- **Llama 2**: General-purpose, good for conversations
-- **Mistral**: Fast and efficient, good for quick responses
-- **Code Llama**: Specialized for programming tasks
-
-To change models:
-1. Select the model from the dropdown in the sidebar
-2. Create a new conversation
-3. The new conversation will use the selected model
-
-**Note**: Existing conversations keep their original model.
-
-### Deleting Conversations
-
-Currently, conversations can only be deleted via the GraphQL API:
-
-```bash
-curl -X POST http://localhost:8080/graphql \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "mutation { deleteConversation(id: \"conv_1\") }",
-    "variables": {"id": "conv_1"}
-  }'
+**Example**:
+```
+Title: Introduction to GraphQLite
+Content: GraphQLite is a graph database built on SQLite...
 ```
 
----
+**Tips**:
+- Use descriptive titles for better organization
+- Include complete sentences for better entity extraction
+- Longer documents (500+ words) work better for context
 
-## Using the GraphQL API
+### Method 2: File Upload
 
-### GraphQL Playground
+1. Click on the **"File Upload"** tab
+2. Click **"Choose a file"** or drag a file into the upload area
+3. Select a `.txt` file from your computer
+4. Click **"Upload & Ingest"**
 
-You can interact with the GraphQL API using tools like:
+**File Requirements**:
+- Format: Plain text (.txt)
+- Encoding: UTF-8
+- Size: Maximum 16MB
+- Content: Any text content
 
-- **curl** (command line)
-- **Postman** (GUI)
-- **GraphQL Playground** (browser extension)
-- **Custom scripts**
+**Tips**:
+- The filename (without .txt) becomes the document title
+- Ensure files are UTF-8 encoded to avoid errors
+- Break large documents into smaller files for better granularity
 
-### Common Operations
+### What Happens During Ingestion?
 
-#### 1. Check System Health
+When you ingest a document, the system:
 
-```bash
-curl -X POST http://localhost:8080/graphql \
-  -H "Content-Type: application/json" \
-  -d '{"query": "{ health { status ollamaConnected } }"}'
+1. **Generates Embeddings**: Creates a 384-dimensional vector representation
+2. **Extracts Entities**: Identifies important terms (capitalized words)
+3. **Creates Graph Nodes**: Adds Document and Entity nodes
+4. **Creates Relationships**: Links documents to their entities
+5. **Stores Data**: Saves everything to the SQLite database
+
+**Success Message**:
+```
+Document "Title" ingested successfully! Extracted 8 entities.
 ```
 
-#### 2. List All Conversations
+## Querying the System
 
-```bash
-curl -X POST http://localhost:8080/graphql \
-  -H "Content-Type: application/json" \
-  -d '{"query": "{ conversations { id title model } }"}'
+### Asking Questions
+
+1. Enter your question in the **"Your Question"** field
+2. Click **"Get Answer"**
+3. Wait for processing (typically 1-3 seconds)
+4. View the results below
+
+### Question Types
+
+The system handles various question types:
+
+**Factual Questions**:
+```
+What is GraphQLite?
+How does vector search work?
 ```
 
-#### 3. Create a Conversation
-
-```bash
-curl -X POST http://localhost:8080/graphql \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "mutation($title: String!, $model: String!) { createConversation(title: $title, model: $model) { id title } }",
-    "variables": {"title": "API Test", "model": "llama2"}
-  }'
+**Comparison Questions**:
+```
+What's the difference between GraphQLite and Neo4j?
+How do embeddings compare to keyword search?
 ```
 
-#### 4. Send a Message
-
-```bash
-curl -X POST http://localhost:8080/graphql \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "mutation($conversationId: ID!, $content: String!) { sendMessage(conversationId: $conversationId, content: $content) { content } }",
-    "variables": {"conversationId": "conv_1", "content": "Hello!"}
-  }'
+**Yes/No Questions**:
+```
+Does GraphQLite support Cypher queries?
+Is Ollama required for the system?
 ```
 
-For more API examples, see [API Reference](api-reference.md).
+**Multi-hop Questions**:
+```
+What technologies does GraphQLite use and why?
+How do the retrieval methods work together?
+```
 
----
+### Query Processing
+
+When you ask a question, the system:
+
+1. **Vector Search**: Finds similar documents using embeddings
+2. **Graph Traversal**: Discovers related documents via shared entities
+3. **Community Detection**: Finds documents in the same topic cluster
+4. **Context Building**: Combines all retrieved information
+5. **LLM Generation**: Generates an answer using Ollama
+
+## Understanding Results
+
+### Result Sections
+
+#### 1. Retrieval Information
+
+Shows how documents were retrieved:
+
+**Vector Search**:
+- Documents found by semantic similarity
+- Distance scores (lower = more similar)
+- Example: `📄 GraphQLite Overview (0.2341)`
+
+**Graph Traversal**:
+- Documents connected via shared entities
+- Example: `🔗 SQLite Integration`
+
+**Community Detection**:
+- Documents in the same topic cluster
+- Example: `🌐 Database Systems (C2)`
+
+#### 2. Context Retrieved
+
+Shows the actual text used to answer your question:
+
+```
+## GraphQLite Overview
+GraphQLite is a graph database...
+
+## SQLite Integration (via shared entities)
+SQLite provides the storage backend...
+```
+
+**Understanding Context**:
+- Each section starts with `##` and the document title
+- `(via shared entities)` indicates graph traversal
+- `(community X)` indicates community detection
+- More context = better answers
+
+#### 3. Answer
+
+The LLM-generated answer based on the context:
+
+```
+GraphQLite is a graph database built on SQLite that provides
+Cypher query support and graph algorithms...
+```
+
+**Answer Quality**:
+- Based on retrieved context quality
+- More relevant documents = better answers
+- If context is insufficient, the LLM will indicate this
+
+## Best Practices
+
+### Document Ingestion
+
+1. **Use Clear Titles**: Make titles descriptive and unique
+2. **Provide Context**: Include complete information in each document
+3. **Avoid Duplicates**: Don't ingest the same content multiple times
+4. **Organize Topics**: Group related documents by topic
+5. **Update Regularly**: Keep your knowledge base current
+
+### Writing Effective Questions
+
+1. **Be Specific**: "What is GraphQLite?" vs "Tell me about databases"
+2. **Use Keywords**: Include important terms from your documents
+3. **Ask One Thing**: Focus on a single topic per question
+4. **Provide Context**: "In GraphQLite, how does..." vs "How does..."
+5. **Iterate**: Refine questions based on initial results
+
+### Optimizing Performance
+
+1. **Start Small**: Begin with 10-20 documents to test
+2. **Monitor Stats**: Check document/entity counts regularly
+3. **Clean Data**: Remove outdated or irrelevant documents
+4. **Use Appropriate Models**: Smaller Ollama models for speed
+5. **Batch Ingestion**: Ingest multiple documents at once
 
 ## Troubleshooting
 
-### Application Won't Start
+### Ollama Not Available
 
-**Problem**: Error when running `./scripts/start.sh`
-
-**Solutions**:
-
-1. **Check Python version**
-   ```bash
-   python3 --version
-   # Should be 3.8 or higher
-   ```
-
-2. **Check if port 8080 is available**
-   ```bash
-   lsof -i :8080
-   # If something is using it, stop that service or change the port
-   ```
-
-3. **View error logs**
-   ```bash
-   cat app.log
-   ```
-
-4. **Recreate virtual environment**
-   ```bash
-   rm -rf venv
-   ./scripts/start.sh
-   ```
-
-### Ollama Not Connected
-
-**Problem**: Red status indicator showing "Ollama Disconnected"
+**Symptom**: Red status dot, "Ollama Offline" message
 
 **Solutions**:
+1. Start Ollama: `ollama serve`
+2. Check if running: `curl http://localhost:11434/api/tags`
+3. Verify model installed: `ollama list`
+4. Pull a model: `ollama pull qwen2.5:3b`
 
-1. **Check if Ollama is running**
-   ```bash
-   curl http://localhost:11434/api/tags
-   ```
+### No Results for Query
 
-2. **Start Ollama**
-   ```bash
-   ollama serve
-   ```
-
-3. **Verify Ollama models**
-   ```bash
-   ollama list
-   ```
-
-4. **Pull a model if needed**
-   ```bash
-   ollama pull llama2
-   ```
-
-### Messages Not Sending
-
-**Problem**: Messages don't get AI responses
+**Symptom**: Empty context or "No answer generated"
 
 **Solutions**:
+1. Ingest more documents on the topic
+2. Rephrase your question
+3. Check if documents contain relevant information
+4. Verify documents were ingested successfully
 
-1. **Check Ollama connection** (see above)
+### Slow Performance
 
-2. **Check conversation is selected**
-   - Ensure a conversation is highlighted in the sidebar
-
-3. **Check browser console**
-   - Open browser DevTools (F12)
-   - Look for error messages
-
-4. **Check application logs**
-   ```bash
-   tail -f app.log
-   ```
-
-### Slow Responses
-
-**Problem**: AI takes a long time to respond
-
-**Reasons**:
-- Large models take longer to process
-- First request after starting Ollama is slower (model loading)
-- Complex queries take more time
+**Symptom**: Queries take >5 seconds
 
 **Solutions**:
-1. Use a smaller/faster model (e.g., Mistral)
-2. Keep messages concise
-3. Wait for model to load on first request
-4. Check system resources (CPU/RAM)
+1. Use a smaller Ollama model (qwen2.5:3b vs qwen3:8b)
+2. Reduce number of documents
+3. Check system resources (CPU, memory)
+4. Restart the application
 
-### Application Crashes
+### Import Errors
 
-**Problem**: Application stops unexpectedly
+**Symptom**: "Import X could not be resolved"
 
 **Solutions**:
+1. Run setup: `./scripts/stop.sh`
+2. Activate venv: `source venv/bin/activate`
+3. Install manually: `pip install -r requirements.txt`
+4. Check Python version: `python --version` (need 3.10+)
 
-1. **Check logs**
-   ```bash
-   tail -n 50 app.log
-   ```
+### Database Errors
 
-2. **Restart application**
-   ```bash
-   ./scripts/stop.sh
-   ./scripts/start.sh
-   ```
+**Symptom**: SQLite or GraphQLite errors
 
-3. **Check system resources**
-   ```bash
-   # Check memory
-   free -h
-   
-   # Check disk space
-   df -h
-   ```
+**Solutions**:
+1. Delete database: `rm knowledge_graph.db`
+2. Restart application: `./scripts/stop.sh && ./scripts/start.sh`
+3. Check file permissions
+4. Verify disk space
 
----
+## Advanced Usage
 
-## Tips and Best Practices
+### Using the API Directly
 
-### For Better Conversations
+You can interact with the system programmatically:
 
-1. **Be Specific**
-   - ❌ "Help with code"
-   - ✅ "Help me write a Python function to parse JSON"
+```python
+import requests
 
-2. **Provide Context**
-   - Include relevant information
-   - Mention what you've tried
-   - Share error messages
+# Ingest a document
+response = requests.post(
+    "http://localhost:8080/api/ingest",
+    json={
+        "title": "My Document",
+        "content": "Document content here..."
+    }
+)
+print(response.json())
 
-3. **Use Appropriate Models**
-   - Code Llama for programming
-   - Llama 2 for general questions
-   - Mistral for quick responses
-
-4. **Break Down Complex Questions**
-   - Ask one thing at a time
-   - Build on previous responses
-   - Use follow-up questions
-
-### For Better Performance
-
-1. **Keep Ollama Running**
-   - Start Ollama before the application
-   - Don't stop Ollama while using the app
-
-2. **Monitor Resources**
-   - Close unused applications
-   - Ensure sufficient RAM (8GB+ recommended)
-   - Check CPU usage
-
-3. **Regular Cleanup**
-   - Delete old conversations you don't need
-   - Restart application periodically
-
-4. **Use Appropriate Models**
-   - Smaller models = faster responses
-   - Larger models = better quality
-
-### For Development
-
-1. **Check Logs Regularly**
-   ```bash
-   tail -f app.log
-   ```
-
-2. **Test API Endpoints**
-   ```bash
-   curl http://localhost:8080/api/health
-   ```
-
-3. **Use Version Control**
-   ```bash
-   ./scripts/github-push.sh <repo-url> "Your commit message"
-   ```
-
-4. **Keep Documentation Updated**
-   - Update docs when making changes
-   - Document new features
-   - Note any issues or limitations
-
----
-
-## Keyboard Shortcuts
-
-| Shortcut | Action |
-|----------|--------|
-| Enter | Send message |
-| Ctrl+R | Refresh page |
-| F12 | Open browser DevTools |
-
----
-
-## Common Use Cases
-
-### 1. Learning Programming
-
-**Scenario**: You want to learn Python
-
-**Steps**:
-1. Create a new conversation: "Python Learning"
-2. Select "Code Llama" model
-3. Ask: "Explain Python list comprehensions with examples"
-4. Follow up with specific questions
-5. Ask for code examples and explanations
-
-### 2. Code Review
-
-**Scenario**: You need help reviewing code
-
-**Steps**:
-1. Create conversation: "Code Review"
-2. Select "Code Llama" model
-3. Paste your code
-4. Ask: "Review this code and suggest improvements"
-5. Ask follow-up questions about suggestions
-
-### 3. General Questions
-
-**Scenario**: You have general questions
-
-**Steps**:
-1. Create conversation with descriptive title
-2. Select "Llama 2" model
-3. Ask your questions
-4. Have a natural conversation
-
-### 4. Quick Answers
-
-**Scenario**: You need fast responses
-
-**Steps**:
-1. Create conversation: "Quick Questions"
-2. Select "Mistral" model
-3. Ask concise questions
-4. Get faster responses
-
----
-
-## Advanced Features
-
-### Using Environment Variables
-
-Customize the application by setting environment variables:
-
-```bash
-# Change port
-export PORT=9000
-
-# Change Ollama URL
-export OLLAMA_URL=http://192.168.1.100:11434
-
-# Start application
-./scripts/start.sh
+# Query the system
+response = requests.post(
+    "http://localhost:8080/api/query",
+    json={
+        "question": "What is this about?",
+        "use_llm": True
+    }
+)
+result = response.json()
+print(result["answer"])
 ```
 
-### Viewing Real-time Logs
+### Batch Document Ingestion
 
-Monitor application activity:
+```python
+import requests
+from pathlib import Path
 
-```bash
-# Follow logs in real-time
-tail -f app.log
-
-# View last 50 lines
-tail -n 50 app.log
-
-# Search logs
-grep "error" app.log
+# Ingest all .txt files in a directory
+docs_dir = Path("input")
+for file_path in docs_dir.glob("*.txt"):
+    with open(file_path, 'r') as f:
+        content = f.read()
+    
+    response = requests.post(
+        "http://localhost:8080/api/ingest",
+        json={
+            "title": file_path.stem,
+            "content": content
+        }
+    )
+    print(f"Ingested: {file_path.name}")
 ```
 
-### Checking Process Status
+### Context-Only Queries
 
-```bash
-# Check if application is running
-cat .app.pid
-ps -p $(cat .app.pid)
+Get context without LLM generation (faster):
 
-# View resource usage
-top -p $(cat .app.pid)
+```python
+response = requests.post(
+    "http://localhost:8080/api/query",
+    json={
+        "question": "What is GraphQLite?",
+        "use_llm": False  # Skip LLM generation
+    }
+)
+context = response.json()["context"]
+print(context)
 ```
 
----
+### Monitoring Statistics
 
-## Getting Help
+```python
+import requests
+import time
 
-If you encounter issues:
+while True:
+    stats = requests.get("http://localhost:8080/api/stats").json()
+    print(f"Docs: {stats['documents']}, "
+          f"Entities: {stats['entities']}, "
+          f"Relations: {stats['relationships']}")
+    time.sleep(10)
+```
 
-1. **Check this guide** for common solutions
-2. **Review logs**: `tail -f app.log`
-3. **Check Ollama**: `curl http://localhost:11434/api/tags`
-4. **Restart application**: `./scripts/stop.sh && ./scripts/start.sh`
-5. **Review documentation** in the `Docs/` folder
+### Custom Entity Extraction
 
----
+Modify `app.py` to use custom entity extraction:
+
+```python
+def _extract_entities(self, text: str) -> list[str]:
+    # Use spaCy for NER
+    import spacy
+    nlp = spacy.load("en_core_web_sm")
+    doc = nlp(text)
+    return [ent.text for ent in doc.ents]
+```
+
+### Changing the LLM Model
+
+Edit `app.py` to use a different Ollama model:
+
+```python
+# In initialize_app()
+graphrag = GraphRAG(DB_PATH, model="llama3.2")  # or any Ollama model
+```
+
+### Exporting the Knowledge Graph
+
+```python
+from graphqlite import graph
+
+g = graph("knowledge_graph.db")
+
+# Export all documents
+docs = g.connection.cypher("MATCH (n:Document) RETURN n")
+for doc in docs:
+    print(doc)
+
+# Export all entities
+entities = g.connection.cypher("MATCH (n:Entity) RETURN n")
+for entity in entities:
+    print(entity)
+
+g.close()
+```
+
+## Tips for Success
+
+1. **Start with Quality Documents**: Good input = good output
+2. **Test with Sample Questions**: Verify the system understands your domain
+3. **Iterate on Questions**: Refine based on results
+4. **Monitor Performance**: Keep an eye on response times
+5. **Keep Documents Focused**: One topic per document works best
+6. **Use Descriptive Titles**: Helps with organization and retrieval
+7. **Regular Maintenance**: Remove outdated information
+8. **Experiment with Models**: Try different Ollama models for your use case
 
 ## Next Steps
 
-- Explore the [API Reference](api-reference.md) for programmatic access
-- Review the [Architecture](architecture.md) to understand the system
-- Check [Ollama Integration](ollama-integration.md) for advanced Ollama features
-
----
-
-**Happy Chatting! 🚀**
+- Read the [Architecture Documentation](architecture.md) to understand how it works
+- Check the [API Reference](api-reference.md) for programmatic access
+- Review [Ollama Integration](ollama-integration.md) for LLM details
+- Explore the GraphQLite documentation at https://colliery-io.github.io/graphqlite/

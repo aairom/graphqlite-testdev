@@ -1,601 +1,475 @@
 # Ollama Integration Guide
 
-Complete guide for integrating and working with Ollama in the GraphQLite Chat Application.
+Complete guide to integrating and using Ollama with the GraphRAG system.
 
-## Table of Contents
+## Overview
 
-1. [What is Ollama?](#what-is-ollama)
-2. [Installation](#installation)
-3. [Configuration](#configuration)
-4. [Available Models](#available-models)
-5. [Integration Details](#integration-details)
-6. [API Communication](#api-communication)
-7. [Troubleshooting](#troubleshooting)
-8. [Advanced Usage](#advanced-usage)
-
----
-
-## What is Ollama?
-
-Ollama is a lightweight, extensible framework for running large language models (LLMs) locally on your machine. It provides:
-
-- **Local Execution**: Run AI models without cloud dependencies
-- **Privacy**: Your data stays on your machine
-- **Speed**: No network latency for API calls
-- **Cost**: Free to use, no API fees
-- **Flexibility**: Multiple models available
-
-### Key Features
-
-- Easy model management
-- REST API for integration
-- Support for various LLM models
-- Efficient resource usage
-- Cross-platform support (macOS, Linux, Windows)
-
----
+Ollama provides local LLM inference for the GraphRAG system. It runs entirely on your machine, ensuring privacy and eliminating API costs.
 
 ## Installation
 
-### macOS
+### macOS and Linux
 
 ```bash
-# Download and install from website
-# Visit: https://ollama.ai/download
+# Download and install from https://ollama.ai
+curl -fsSL https://ollama.com/install.sh | sh
 
-# Or use Homebrew
+# Or use Homebrew on macOS
 brew install ollama
-```
-
-### Linux
-
-```bash
-curl -fsSL https://ollama.ai/install.sh | sh
 ```
 
 ### Windows
 
-Download the installer from [ollama.ai/download](https://ollama.ai/download)
+Download the installer from [ollama.ai](https://ollama.ai) and run it.
 
-### Verify Installation
-
-```bash
-ollama --version
-```
-
----
-
-## Configuration
-
-### Starting Ollama
+## Starting Ollama
 
 ```bash
-# Start Ollama service
+# Start the Ollama server
 ollama serve
 ```
 
-The service will start on `http://localhost:11434` by default.
+The server will start on `http://localhost:11434` by default.
 
-### Pulling Models
+## Model Management
 
-Before using a model, you need to pull it:
-
-```bash
-# Pull Llama 2 (7B parameters)
-ollama pull llama2
-
-# Pull Mistral (7B parameters)
-ollama pull mistral
-
-# Pull Code Llama (7B parameters)
-ollama pull codellama
-
-# Pull other models
-ollama pull neural-chat
-ollama pull orca-mini
-```
-
-### Listing Installed Models
+### Listing Available Models
 
 ```bash
+# List installed models
 ollama list
 ```
 
-Output example:
+### Pulling Models
+
+```bash
+# Pull a specific model
+ollama pull qwen2.5:3b
+
+# Other recommended models
+ollama pull llama3.2        # Meta's Llama 3.2
+ollama pull mistral         # Mistral 7B
+ollama pull phi3            # Microsoft Phi-3
 ```
-NAME              ID              SIZE      MODIFIED
-llama2:latest     78e26419b446    3.8 GB    2 hours ago
-mistral:latest    61e88e884507    4.1 GB    1 day ago
-codellama:latest  8fdf8f752f6e    3.8 GB    3 days ago
-```
+
+### Recommended Models
+
+| Model | Size | Speed | Quality | Use Case |
+|-------|------|-------|---------|----------|
+| qwen2.5:3b | 3B | ⚡⚡⚡ | ⭐⭐⭐ | Fast responses, good quality |
+| llama3.2 | 3B | ⚡⚡⚡ | ⭐⭐⭐ | Balanced performance |
+| mistral | 7B | ⚡⚡ | ⭐⭐⭐⭐ | Better quality, slower |
+| qwen3:8b | 8B | ⚡⚡ | ⭐⭐⭐⭐ | High quality, slower |
 
 ### Removing Models
 
 ```bash
-ollama rm llama2
+# Remove a model to free space
+ollama rm qwen3:8b
 ```
 
----
+## Configuration
 
-## Available Models
+### Changing the Model
 
-### Recommended Models
-
-| Model | Size | Best For | Speed | Quality |
-|-------|------|----------|-------|---------|
-| **Llama 2** | 3.8GB | General conversation | Medium | High |
-| **Mistral** | 4.1GB | Fast responses | Fast | High |
-| **Code Llama** | 3.8GB | Programming tasks | Medium | High |
-| **Neural Chat** | 4.1GB | Conversational AI | Medium | High |
-| **Orca Mini** | 1.9GB | Quick tasks | Very Fast | Medium |
-
-### Model Variants
-
-Most models come in different sizes:
-
-```bash
-# 7B parameters (default)
-ollama pull llama2
-
-# 13B parameters (better quality, slower)
-ollama pull llama2:13b
-
-# 70B parameters (best quality, requires more resources)
-ollama pull llama2:70b
-```
-
-### Choosing a Model
-
-**For General Use:**
-- Start with `llama2` - good balance of speed and quality
-
-**For Programming:**
-- Use `codellama` - specialized for code generation and explanation
-
-**For Speed:**
-- Use `mistral` or `orca-mini` - faster responses
-
-**For Quality:**
-- Use larger variants (13b, 70b) if you have the resources
-
----
-
-## Integration Details
-
-### How the Application Connects to Ollama
-
-The application communicates with Ollama through its REST API:
+Edit `app.py` and modify the model parameter:
 
 ```python
-# Configuration
-OLLAMA_BASE_URL = 'http://localhost:11434'
+def initialize_app():
+    global graphrag
+    # Change the model here
+    graphrag = GraphRAG(DB_PATH, model="llama3.2")
+```
 
-# Health check
-response = requests.get(f"{OLLAMA_BASE_URL}/api/tags")
+### Changing the Ollama URL
 
-# Send message
-response = requests.post(
-    f"{OLLAMA_BASE_URL}/api/chat",
-    json={
-        "model": "llama2",
-        "messages": [
-            {"role": "user", "content": "Hello"}
-        ],
-        "stream": False
-    }
+If Ollama is running on a different host or port:
+
+```python
+# In ollama_client.py
+class OllamaClient:
+    def __init__(
+        self,
+        model: str = "qwen2.5:3b",
+        base_url: str = "http://localhost:11434",  # Change this
+        timeout: float = 120.0,
+    ):
+```
+
+### Adjusting Temperature
+
+Temperature controls randomness (0.0 = deterministic, 1.0 = creative):
+
+```python
+# In app.py, query() method
+result["answer"] = self.llm.chat(messages, temperature=0.3)  # Adjust this
+```
+
+**Temperature Guidelines**:
+- `0.0-0.3`: Factual, consistent answers
+- `0.4-0.7`: Balanced creativity and consistency
+- `0.8-1.0`: Creative, varied responses
+
+### Timeout Settings
+
+Adjust timeout for slower models or hardware:
+
+```python
+# In ollama_client.py
+self.timeout = 120.0  # Increase for slower models
+```
+
+## API Reference
+
+### OllamaClient Class
+
+```python
+from ollama_client import OllamaClient, Message
+
+# Initialize client
+client = OllamaClient(
+    model="qwen2.5:3b",
+    base_url="http://localhost:11434",
+    timeout=120.0
 )
 ```
 
-### Connection Flow
-
-```mermaid
-sequenceDiagram
-    participant App as Application
-    participant Ollama as Ollama Service
-    participant Model as LLM Model
-
-    App->>Ollama: Health Check (GET /api/tags)
-    Ollama-->>App: Available Models
-    
-    App->>Ollama: Send Message (POST /api/chat)
-    Ollama->>Model: Load Model (if needed)
-    Model-->>Ollama: Model Ready
-    Ollama->>Model: Process Message
-    Model-->>Ollama: Generated Response
-    Ollama-->>App: Response JSON
-```
-
-### Context Management
-
-The application maintains conversation context by sending the last 5 messages:
+### Chat Completion
 
 ```python
-# Build context from conversation history
-messages = []
-for msg in conversation.messages[-5:]:  # Last 5 messages
-    messages.append({
-        "role": msg.role,
-        "content": msg.content
-    })
+messages = [
+    Message(role="system", content="You are a helpful assistant."),
+    Message(role="user", content="What is GraphQLite?")
+]
 
-# Add new user message
-messages.append({
-    "role": "user",
-    "content": new_message
-})
-```
-
-This allows the AI to:
-- Remember previous messages
-- Maintain conversation flow
-- Provide contextual responses
-
----
-
-## API Communication
-
-### Ollama API Endpoints
-
-#### 1. List Models
-
-```bash
-GET http://localhost:11434/api/tags
-```
-
-Response:
-```json
-{
-  "models": [
-    {
-      "name": "llama2:latest",
-      "modified_at": "2024-03-26T10:00:00Z",
-      "size": 3826793677
-    }
-  ]
-}
-```
-
-#### 2. Generate Chat Response
-
-```bash
-POST http://localhost:11434/api/chat
-```
-
-Request:
-```json
-{
-  "model": "llama2",
-  "messages": [
-    {
-      "role": "user",
-      "content": "What is GraphQL?"
-    }
-  ],
-  "stream": false
-}
-```
-
-Response:
-```json
-{
-  "model": "llama2",
-  "created_at": "2024-03-26T10:00:00Z",
-  "message": {
-    "role": "assistant",
-    "content": "GraphQL is a query language for APIs..."
-  },
-  "done": true
-}
-```
-
-#### 3. Generate Completion (Alternative)
-
-```bash
-POST http://localhost:11434/api/generate
-```
-
-Request:
-```json
-{
-  "model": "llama2",
-  "prompt": "What is GraphQL?",
-  "stream": false
-}
+response = client.chat(messages, temperature=0.7)
+print(response)
 ```
 
 ### Streaming Responses
 
-For real-time streaming (not currently implemented):
-
 ```python
-response = requests.post(
-    f"{OLLAMA_BASE_URL}/api/chat",
-    json={
-        "model": "llama2",
-        "messages": messages,
-        "stream": True  # Enable streaming
-    },
-    stream=True
-)
-
-for line in response.iter_lines():
-    if line:
-        data = json.loads(line)
-        print(data['message']['content'], end='', flush=True)
+for chunk in client.chat_stream(messages, temperature=0.7):
+    print(chunk, end="", flush=True)
 ```
 
----
+### Simple Generation
+
+```python
+response = client.generate(
+    prompt="Explain GraphQLite in one sentence.",
+    system="You are a technical writer.",
+    temperature=0.5
+)
+print(response)
+```
+
+### Health Check
+
+```python
+if client.is_available():
+    print("Ollama is running")
+else:
+    print("Ollama is not available")
+```
+
+### List Models
+
+```python
+models = client.list_models()
+print(f"Available models: {models}")
+```
+
+## System Prompts
+
+### Default System Prompt
+
+The system uses this prompt by default:
+
+```python
+SYSTEM_PROMPT = """You are a helpful assistant that answers questions based on the provided context.
+
+Instructions:
+- Answer the question using ONLY the information in the context below
+- Be concise and direct
+- If the context doesn't contain enough information, say so
+- For yes/no questions, start with "Yes" or "No" then explain briefly"""
+```
+
+### Customizing System Prompts
+
+Edit `app.py` to change the system prompt:
+
+```python
+SYSTEM_PROMPT = """You are an expert in graph databases and knowledge systems.
+
+Instructions:
+- Provide detailed technical explanations
+- Include examples when relevant
+- Reference specific technologies mentioned in the context
+- Be precise and accurate"""
+```
+
+## Performance Optimization
+
+### Model Selection
+
+Choose models based on your hardware:
+
+**Low-end Hardware** (8GB RAM):
+- qwen2.5:3b
+- phi3:mini
+- llama3.2:1b
+
+**Mid-range Hardware** (16GB RAM):
+- qwen2.5:3b
+- llama3.2
+- mistral
+
+**High-end Hardware** (32GB+ RAM):
+- qwen3:8b
+- llama3.1:8b
+- mixtral
+
+### GPU Acceleration
+
+Ollama automatically uses GPU if available:
+
+```bash
+# Check GPU usage
+nvidia-smi  # For NVIDIA GPUs
+```
+
+### CPU Optimization
+
+```bash
+# Set number of CPU threads
+export OLLAMA_NUM_THREADS=8
+
+# Start Ollama
+ollama serve
+```
+
+### Memory Management
+
+```bash
+# Limit context window size
+export OLLAMA_MAX_LOADED_MODELS=1
+
+# Start Ollama
+ollama serve
+```
 
 ## Troubleshooting
 
 ### Ollama Not Starting
 
-**Problem**: `ollama serve` fails to start
+**Check if port is in use**:
+```bash
+lsof -i :11434
+```
 
-**Solutions**:
+**Kill existing process**:
+```bash
+pkill ollama
+ollama serve
+```
 
-1. **Check if already running**
-   ```bash
-   ps aux | grep ollama
-   ```
+### Model Download Fails
 
-2. **Check port availability**
-   ```bash
-   lsof -i :11434
-   ```
+**Check disk space**:
+```bash
+df -h
+```
 
-3. **View logs**
-   ```bash
-   # macOS
-   tail -f ~/Library/Logs/Ollama/server.log
-   
-   # Linux
-   journalctl -u ollama -f
-   ```
-
-4. **Restart service**
-   ```bash
-   # Kill existing process
-   pkill ollama
-   
-   # Start again
-   ollama serve
-   ```
-
-### Model Not Found
-
-**Problem**: "model not found" error
-
-**Solutions**:
-
-1. **List installed models**
-   ```bash
-   ollama list
-   ```
-
-2. **Pull the model**
-   ```bash
-   ollama pull llama2
-   ```
-
-3. **Verify model name**
-   - Use exact name from `ollama list`
-   - Include tag if needed (e.g., `llama2:13b`)
+**Retry download**:
+```bash
+ollama pull qwen2.5:3b
+```
 
 ### Slow Responses
 
-**Problem**: AI takes too long to respond
-
-**Causes & Solutions**:
-
-1. **First Request After Start**
-   - Model needs to load into memory
-   - Subsequent requests will be faster
-   - Solution: Wait for first request to complete
-
-2. **Large Model**
-   - 13B and 70B models are slower
-   - Solution: Use 7B models for faster responses
-
-3. **Insufficient Resources**
-   - Check RAM usage
-   - Solution: Close other applications or use smaller model
-
-4. **CPU vs GPU**
-   - CPU inference is slower
-   - Solution: Use GPU if available (NVIDIA/AMD)
-
-### Connection Refused
-
-**Problem**: Application can't connect to Ollama
-
 **Solutions**:
-
-1. **Verify Ollama is running**
-   ```bash
-   curl http://localhost:11434/api/tags
-   ```
-
-2. **Check firewall**
-   - Ensure port 11434 is not blocked
-
-3. **Check Ollama URL**
-   - Default: `http://localhost:11434`
-   - Verify in application configuration
-
-4. **Restart both services**
-   ```bash
-   # Stop application
-   ./scripts/stop.sh
-   
-   # Restart Ollama
-   pkill ollama
-   ollama serve
-   
-   # Start application
-   ./scripts/start.sh
-   ```
+1. Use a smaller model (qwen2.5:3b instead of qwen3:8b)
+2. Reduce context length
+3. Enable GPU acceleration
+4. Increase timeout setting
 
 ### Out of Memory
 
-**Problem**: System runs out of memory
-
 **Solutions**:
+1. Use a smaller model
+2. Close other applications
+3. Restart Ollama
+4. Limit loaded models
 
-1. **Use smaller model**
-   ```bash
-   ollama pull orca-mini  # Only 1.9GB
-   ```
+### Connection Refused
 
-2. **Close other applications**
+**Check if Ollama is running**:
+```bash
+curl http://localhost:11434/api/tags
+```
 
-3. **Increase swap space** (Linux)
-   ```bash
-   sudo fallocate -l 8G /swapfile
-   sudo chmod 600 /swapfile
-   sudo mkswap /swapfile
-   sudo swapon /swapfile
-   ```
-
-4. **Check system requirements**
-   - Minimum: 8GB RAM
-   - Recommended: 16GB+ RAM
-
----
+**Restart Ollama**:
+```bash
+pkill ollama
+ollama serve
+```
 
 ## Advanced Usage
 
-### Custom Ollama URL
-
-If Ollama is running on a different machine or port:
-
-```bash
-# Set environment variable
-export OLLAMA_URL=http://192.168.1.100:11434
-
-# Start application
-./scripts/start.sh
-```
-
-### Model Parameters
-
-Customize model behavior (requires code modification):
+### Custom Model Parameters
 
 ```python
-response = requests.post(
-    f"{OLLAMA_BASE_URL}/api/chat",
-    json={
-        "model": "llama2",
-        "messages": messages,
-        "stream": False,
-        "options": {
-            "temperature": 0.7,      # Creativity (0-1)
-            "top_p": 0.9,           # Nucleus sampling
-            "top_k": 40,            # Top-k sampling
-            "num_predict": 512,     # Max tokens
-            "stop": ["\n\n"]        # Stop sequences
+# In ollama_client.py, modify the payload
+payload = {
+    "model": self.model,
+    "messages": formatted_messages,
+    "stream": stream,
+    "options": {
+        "temperature": temperature,
+        "top_p": 0.9,           # Nucleus sampling
+        "top_k": 40,            # Top-k sampling
+        "repeat_penalty": 1.1,  # Penalize repetition
+        "num_predict": 512,     # Max tokens to generate
+    },
+}
+```
+
+### Multiple Model Support
+
+```python
+class MultiModelClient:
+    def __init__(self):
+        self.fast_model = OllamaClient(model="qwen2.5:3b")
+        self.quality_model = OllamaClient(model="qwen3:8b")
+    
+    def chat(self, messages, use_quality=False):
+        client = self.quality_model if use_quality else self.fast_model
+        return client.chat(messages)
+```
+
+### Fallback Strategy
+
+```python
+def chat_with_fallback(messages):
+    models = ["qwen3:8b", "qwen2.5:3b", "llama3.2"]
+    
+    for model in models:
+        try:
+            client = OllamaClient(model=model)
+            return client.chat(messages)
+        except Exception as e:
+            print(f"Model {model} failed: {e}")
+            continue
+    
+    raise Exception("All models failed")
+```
+
+### Caching Responses
+
+```python
+import hashlib
+import json
+
+class CachedOllamaClient:
+    def __init__(self, model):
+        self.client = OllamaClient(model=model)
+        self.cache = {}
+    
+    def chat(self, messages, temperature=0.7):
+        # Create cache key
+        key = hashlib.md5(
+            json.dumps([m.__dict__ for m in messages]).encode()
+        ).hexdigest()
+        
+        if key in self.cache:
+            return self.cache[key]
+        
+        response = self.client.chat(messages, temperature)
+        self.cache[key] = response
+        return response
+```
+
+## Integration Examples
+
+### Async Support
+
+```python
+import asyncio
+import httpx
+
+class AsyncOllamaClient:
+    def __init__(self, model="qwen2.5:3b"):
+        self.model = model
+        self.base_url = "http://localhost:11434"
+        self.client = httpx.AsyncClient(timeout=120.0)
+    
+    async def chat(self, messages, temperature=0.7):
+        payload = {
+            "model": self.model,
+            "messages": [{"role": m.role, "content": m.content} for m in messages],
+            "stream": False,
+            "options": {"temperature": temperature}
         }
-    }
-)
+        
+        response = await self.client.post(
+            f"{self.base_url}/api/chat",
+            json=payload
+        )
+        return response.json()["message"]["content"]
+
+# Usage
+async def main():
+    client = AsyncOllamaClient()
+    response = await client.chat(messages)
+    print(response)
+
+asyncio.run(main())
 ```
 
-### Using Custom Models
+### Batch Processing
 
-1. **Create a Modelfile**
-   ```bash
-   # Create Modelfile
-   cat > Modelfile << EOF
-   FROM llama2
-   PARAMETER temperature 0.8
-   PARAMETER top_p 0.9
-   SYSTEM You are a helpful coding assistant.
-   EOF
-   ```
-
-2. **Create the model**
-   ```bash
-   ollama create my-custom-model -f Modelfile
-   ```
-
-3. **Use in application**
-   - Select "my-custom-model" from the model dropdown
-
-### Performance Optimization
-
-1. **Keep Ollama Running**
-   - Don't stop/start frequently
-   - Models stay loaded in memory
-
-2. **Use Appropriate Model Size**
-   - 7B for most tasks
-   - 13B for better quality
-   - 70B only if needed and resources allow
-
-3. **Limit Context Length**
-   - Current: Last 5 messages
-   - Adjust based on needs
-
-4. **Enable GPU Acceleration**
-   - Ollama automatically uses GPU if available
-   - Verify: Check GPU usage during inference
-
-### Monitoring Ollama
-
-```bash
-# Check running processes
-ps aux | grep ollama
-
-# Monitor resource usage
-top -p $(pgrep ollama)
-
-# View API logs
-tail -f ~/Library/Logs/Ollama/server.log
+```python
+def batch_chat(questions, model="qwen2.5:3b"):
+    client = OllamaClient(model=model)
+    results = []
+    
+    for question in questions:
+        messages = [
+            Message(role="system", content=SYSTEM_PROMPT),
+            Message(role="user", content=question)
+        ]
+        answer = client.chat(messages)
+        results.append({"question": question, "answer": answer})
+    
+    return results
 ```
-
----
 
 ## Best Practices
 
-1. **Start Ollama First**
-   - Always start Ollama before the application
-   - Verify it's running before sending requests
-
-2. **Choose Models Wisely**
-   - Match model to task
-   - Consider resource constraints
-
-3. **Handle Errors Gracefully**
-   - Check connection before requests
-   - Provide fallback responses
-
-4. **Monitor Resources**
-   - Watch RAM usage
-   - Monitor response times
-
-5. **Keep Models Updated**
-   ```bash
-   ollama pull llama2  # Updates to latest version
-   ```
-
----
+1. **Model Selection**: Start with qwen2.5:3b for speed, upgrade if needed
+2. **Temperature**: Use 0.3 for factual answers, 0.7 for creative responses
+3. **Context Length**: Keep context under 2000 tokens for best performance
+4. **Error Handling**: Always implement fallback strategies
+5. **Caching**: Cache responses for frequently asked questions
+6. **Monitoring**: Track response times and adjust models accordingly
+7. **Updates**: Keep Ollama updated for latest features and fixes
 
 ## Resources
 
-- **Ollama Website**: https://ollama.ai/
-- **Ollama GitHub**: https://github.com/ollama/ollama
-- **Model Library**: https://ollama.ai/library
-- **Documentation**: https://github.com/ollama/ollama/tree/main/docs
+- [Ollama Documentation](https://github.com/ollama/ollama)
+- [Model Library](https://ollama.ai/library)
+- [Ollama API Reference](https://github.com/ollama/ollama/blob/main/docs/api.md)
+- [Community Models](https://ollama.ai/search)
 
----
+## Support
 
-## Summary
+For Ollama-specific issues:
+- GitHub: https://github.com/ollama/ollama/issues
+- Discord: https://discord.gg/ollama
 
-Ollama provides a powerful, local AI solution that integrates seamlessly with the GraphQLite Chat Application. By following this guide, you can:
-
-- Install and configure Ollama
-- Choose appropriate models
-- Troubleshoot common issues
-- Optimize performance
-- Extend functionality
-
-For application-specific integration details, see the [Architecture Documentation](architecture.md).
+For integration issues with this system:
+- Check the [Troubleshooting](#troubleshooting) section
+- Review the [User Guide](user-guide.md)
+- Examine application logs

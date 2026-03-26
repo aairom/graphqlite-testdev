@@ -85,6 +85,17 @@ fi
 
 # Start the application in detached mode
 echo -e "${YELLOW}🚀 Starting application in detached mode...${NC}"
+
+# Set DYLD_LIBRARY_PATH for macOS to enable SQLite extensions
+# Check common Homebrew locations
+if [ -d "/opt/homebrew/opt/sqlite/lib" ]; then
+    export DYLD_LIBRARY_PATH="/opt/homebrew/opt/sqlite/lib:$DYLD_LIBRARY_PATH"
+elif [ -d "/usr/local/opt/sqlite/lib" ]; then
+    export DYLD_LIBRARY_PATH="/usr/local/opt/sqlite/lib:$DYLD_LIBRARY_PATH"
+elif [ -d "/opt/local/lib" ]; then
+    export DYLD_LIBRARY_PATH="/opt/local/lib:$DYLD_LIBRARY_PATH"
+fi
+
 nohup python3 $APP_FILE > $LOG_FILE 2>&1 &
 APP_PID=$!
 
@@ -102,11 +113,11 @@ if ps -p $APP_PID > /dev/null 2>&1; then
     echo -e "${GREEN}🌐 Application URL:${NC}"
     echo -e "${BLUE}   http://localhost:$PORT${NC}"
     echo ""
-    echo -e "${GREEN}🔗 GraphQL Endpoint:${NC}"
-    echo -e "${BLUE}   http://localhost:$PORT/graphql${NC}"
-    echo ""
-    echo -e "${GREEN}💚 Health Check:${NC}"
-    echo -e "${BLUE}   http://localhost:$PORT/api/health${NC}"
+    echo -e "${GREEN}📊 API Endpoints:${NC}"
+    echo -e "${BLUE}   http://localhost:$PORT/api/health${NC} (Health Check)"
+    echo -e "${BLUE}   http://localhost:$PORT/api/stats${NC} (Statistics)"
+    echo -e "${BLUE}   http://localhost:$PORT/api/ingest${NC} (Ingest Document)"
+    echo -e "${BLUE}   http://localhost:$PORT/api/query${NC} (Query Knowledge Graph)"
     echo ""
     echo -e "${GREEN}📝 Process ID:${NC} $APP_PID"
     echo -e "${GREEN}📄 Log File:${NC} $LOG_FILE"

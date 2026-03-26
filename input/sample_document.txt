@@ -1,0 +1,22 @@
+GraphQLite: A Graph Database on SQLite
+
+GraphQLite is a powerful graph database library built on top of SQLite. It provides a lightweight yet feature-rich solution for storing and querying graph data using the familiar Cypher query language.
+
+Key Features:
+- Native Cypher query support for intuitive graph traversals
+- Built on SQLite for portability and zero-configuration setup
+- Support for graph algorithms including Louvain community detection
+- Efficient node and edge operations with upsert capabilities
+- Integration with vector embeddings for hybrid search
+
+Architecture:
+GraphQLite uses SQLite as its storage backend, making it perfect for embedded applications and prototypes. The library translates Cypher queries into optimized SQL operations, providing graph database functionality without the overhead of a separate graph database server.
+
+Use Cases:
+GraphQLite excels in knowledge graph applications, recommendation systems, and graph-based retrieval augmented generation (GraphRAG). It's particularly well-suited for applications that need to combine vector similarity search with graph traversal for multi-hop reasoning.
+
+Community Detection:
+The built-in Louvain algorithm enables automatic discovery of communities within your graph. This is useful for finding clusters of related nodes, topic modeling, and improving retrieval in RAG systems.
+
+Integration with AI:
+GraphQLite pairs naturally with LLM applications through GraphRAG patterns. By combining vector embeddings (via sqlite-vec) with graph structure, you can build more sophisticated context retrieval systems that understand relationships between documents.

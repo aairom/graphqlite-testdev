@@ -1,406 +1,282 @@
 # API Reference
 
-Complete API documentation for the GraphQLite + Ollama Chat Application.
+Complete REST API documentation for the GraphRAG Knowledge System.
 
-## Table of Contents
+## Base URL
 
-1. [GraphQL API](#graphql-api)
-2. [REST Endpoints](#rest-endpoints)
-3. [Data Types](#data-types)
-4. [Error Handling](#error-handling)
-5. [Examples](#examples)
+```
+http://localhost:8080
+```
+
+## Endpoints
+
+### Health Check
+
+Check the system health and Ollama availability.
+
+**Endpoint**: `GET /api/health`
+
+**Response**:
+```json
+{
+  "status": "healthy",
+  "ollama_available": true,
+  "database": "knowledge_graph.db"
+}
+```
+
+**Status Codes**:
+- `200 OK`: System is healthy
 
 ---
 
-## GraphQL API
+### Get Statistics
 
-### Endpoint
+Retrieve knowledge graph statistics.
 
+**Endpoint**: `GET /api/stats`
+
+**Response**:
+```json
+{
+  "documents": 10,
+  "entities": 45,
+  "relationships": 120
+}
 ```
-POST http://localhost:8080/graphql
-GET  http://localhost:8080/graphql (schema introspection)
-```
 
-### Headers
+**Status Codes**:
+- `200 OK`: Statistics retrieved successfully
+- `500 Internal Server Error`: GraphRAG not initialized
 
+---
+
+### Ingest Document (Text)
+
+Ingest a document from text input.
+
+**Endpoint**: `POST /api/ingest`
+
+**Headers**:
 ```
 Content-Type: application/json
 ```
 
----
-
-## Queries
-
-### 1. Get All Conversations
-
-Retrieve all conversations with their messages.
-
-**Query:**
-```graphql
-query {
-  conversations {
-    id
-    title
-    model
-    createdAt
-    messages {
-      id
-      role
-      content
-      timestamp
-    }
-  }
+**Request Body**:
+```json
+{
+  "title": "Document Title",
+  "content": "Document content goes here..."
 }
 ```
 
-**Response:**
+**Parameters**:
+- `title` (string, required): Document title
+- `content` (string, required): Document content
+
+**Response**:
 ```json
 {
-  "data": {
-    "conversations": [
+  "success": true,
+  "doc_id": "doc:Document_Title",
+  "title": "Document Title",
+  "entities_extracted": 8
+}
+```
+
+**Error Response**:
+```json
+{
+  "success": false,
+  "error": "Error message"
+}
+```
+
+**Status Codes**:
+- `200 OK`: Document ingested successfully
+- `400 Bad Request`: Missing title or content
+- `500 Internal Server Error`: GraphRAG not initialized or processing error
+
+**Example**:
+```bash
+curl -X POST http://localhost:8080/api/ingest \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "GraphQLite Overview",
+    "content": "GraphQLite is a graph database built on SQLite..."
+  }'
+```
+
+---
+
+### Ingest Document (File)
+
+Upload and ingest a text file.
+
+**Endpoint**: `POST /api/ingest/file`
+
+**Headers**:
+```
+Content-Type: multipart/form-data
+```
+
+**Request Body**:
+- `file`: Text file (.txt)
+
+**Response**:
+```json
+{
+  "success": true,
+  "doc_id": "doc:filename",
+  "title": "filename",
+  "entities_extracted": 12
+}
+```
+
+**Error Response**:
+```json
+{
+  "error": "Error message"
+}
+```
+
+**Status Codes**:
+- `200 OK`: File ingested successfully
+- `400 Bad Request`: No file provided or invalid file type
+- `500 Internal Server Error`: File reading error or GraphRAG not initialized
+
+**Example**:
+```bash
+curl -X POST http://localhost:8080/api/ingest/file \
+  -F "file=@document.txt"
+```
+
+---
+
+### Query Knowledge Graph
+
+Ask a question and get an answer based on the knowledge graph.
+
+**Endpoint**: `POST /api/query`
+
+**Headers**:
+```
+Content-Type: application/json
+```
+
+**Request Body**:
+```json
+{
+  "question": "What is GraphQLite?",
+  "use_llm": true
+}
+```
+
+**Parameters**:
+- `question` (string, required): The question to answer
+- `use_llm` (boolean, optional): Whether to use LLM for answer generation (default: true)
+
+**Response**:
+```json
+{
+  "question": "What is GraphQLite?",
+  "context": "## GraphQLite Overview\nGraphQLite is a graph database...",
+  "retrieval_info": {
+    "vector_search": [
       {
-        "id": "conv_1",
-        "title": "Sample Conversation",
-        "model": "llama2",
-        "createdAt": "2024-03-26T10:00:00.000Z",
-        "messages": [
-          {
-            "id": "msg_1",
-            "role": "user",
-            "content": "Hello, what can you help me with?",
-            "timestamp": "2024-03-26T10:00:00.000Z"
-          }
-        ]
+        "title": "GraphQLite Overview",
+        "distance": 0.2341
+      }
+    ],
+    "graph_traversal": [
+      {
+        "title": "SQLite Integration"
+      }
+    ],
+    "community": [
+      {
+        "title": "Database Systems",
+        "community_id": 2
       }
     ]
-  }
+  },
+  "answer": "GraphQLite is a graph database built on SQLite that provides..."
 }
+```
+
+**Response Fields**:
+- `question`: The original question
+- `context`: Combined context from all retrieval methods
+- `retrieval_info`: Detailed information about retrieved documents
+  - `vector_search`: Documents found via vector similarity
+  - `graph_traversal`: Documents found via graph edges
+  - `community`: Documents found via community detection
+- `answer`: LLM-generated answer (null if `use_llm` is false)
+
+**Error Response**:
+```json
+{
+  "error": "Error message"
+}
+```
+
+**Status Codes**:
+- `200 OK`: Query processed successfully
+- `400 Bad Request`: Missing question
+- `500 Internal Server Error`: GraphRAG not initialized or processing error
+
+**Example**:
+```bash
+curl -X POST http://localhost:8080/api/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question": "What is GraphQLite?",
+    "use_llm": true
+  }'
 ```
 
 ---
 
-### 2. Get Single Conversation
+## Data Models
 
-Retrieve a specific conversation by ID.
-
-**Query:**
-```graphql
-query {
-  conversation(id: "conv_1") {
-    id
-    title
-    model
-    createdAt
-    messages {
-      id
-      role
-      content
-      timestamp
-    }
+### Document Node
+```json
+{
+  "id": "doc:Document_Title",
+  "labels": ["Document"],
+  "properties": {
+    "title": "Document Title",
+    "content": "Document content (truncated to 1000 chars)"
   }
 }
 ```
 
-**Variables:**
+### Entity Node
 ```json
 {
-  "id": "conv_1"
-}
-```
-
-**Response:**
-```json
-{
-  "data": {
-    "conversation": {
-      "id": "conv_1",
-      "title": "Sample Conversation",
-      "model": "llama2",
-      "createdAt": "2024-03-26T10:00:00.000Z",
-      "messages": [...]
-    }
+  "id": "entity:EntityName",
+  "labels": ["Entity"],
+  "properties": {
+    "name": "EntityName"
   }
 }
 ```
 
-**Error Response (Not Found):**
+### MENTIONS Edge
 ```json
 {
-  "data": {
-    "conversation": null
-  }
+  "from": "doc:Document_Title",
+  "to": "entity:EntityName",
+  "type": "MENTIONS",
+  "properties": {}
 }
 ```
 
----
-
-### 3. Get Available Models
-
-List all available Ollama models.
-
-**Query:**
-```graphql
-query {
-  availableModels
-}
-```
-
-**Response:**
-```json
+### Embedding Record
+```sql
 {
-  "data": {
-    "availableModels": [
-      "llama2",
-      "mistral",
-      "codellama",
-      "neural-chat"
-    ]
-  }
-}
-```
-
-**Note:** If Ollama is not connected, returns default models: `["llama2", "mistral", "codellama"]`
-
----
-
-### 4. Health Check
-
-Check system and Ollama connection status.
-
-**Query:**
-```graphql
-query {
-  health {
-    status
-    ollamaConnected
-    timestamp
-  }
-}
-```
-
-**Response:**
-```json
-{
-  "data": {
-    "health": {
-      "status": "healthy",
-      "ollamaConnected": true,
-      "timestamp": "2024-03-26T10:00:00.000Z"
-    }
-  }
-}
-```
-
----
-
-## Mutations
-
-### 1. Create Conversation
-
-Create a new conversation with a specified title and model.
-
-**Mutation:**
-```graphql
-mutation CreateConversation($title: String!, $model: String!) {
-  createConversation(title: $title, model: $model) {
-    id
-    title
-    model
-    createdAt
-    messages {
-      id
-    }
-  }
-}
-```
-
-**Variables:**
-```json
-{
-  "title": "My New Chat",
-  "model": "llama2"
-}
-```
-
-**Response:**
-```json
-{
-  "data": {
-    "createConversation": {
-      "id": "conv_2",
-      "title": "My New Chat",
-      "model": "llama2",
-      "createdAt": "2024-03-26T10:05:00.000Z",
-      "messages": []
-    }
-  }
-}
-```
-
----
-
-### 2. Send Message
-
-Send a message in a conversation and receive AI response.
-
-**Mutation:**
-```graphql
-mutation SendMessage($conversationId: ID!, $content: String!) {
-  sendMessage(conversationId: $conversationId, content: $content) {
-    id
-    role
-    content
-    timestamp
-  }
-}
-```
-
-**Variables:**
-```json
-{
-  "conversationId": "conv_1",
-  "content": "What is GraphQL?"
-}
-```
-
-**Response:**
-```json
-{
-  "data": {
-    "sendMessage": {
-      "id": "msg_3",
-      "role": "assistant",
-      "content": "GraphQL is a query language for APIs...",
-      "timestamp": "2024-03-26T10:06:00.000Z"
-    }
-  }
-}
-```
-
-**Note:** This mutation:
-1. Creates a user message with the provided content
-2. Sends the message to Ollama
-3. Creates an assistant message with Ollama's response
-4. Returns the assistant message
-
-**Error Response (Conversation Not Found):**
-```json
-{
-  "errors": [
-    {
-      "message": "Conversation conv_999 not found"
-    }
-  ]
-}
-```
-
----
-
-### 3. Delete Conversation
-
-Delete a conversation by ID.
-
-**Mutation:**
-```graphql
-mutation DeleteConversation($id: ID!) {
-  deleteConversation(id: $id)
-}
-```
-
-**Variables:**
-```json
-{
-  "id": "conv_1"
-}
-```
-
-**Response:**
-```json
-{
-  "data": {
-    "deleteConversation": true
-  }
-}
-```
-
-**Response (Not Found):**
-```json
-{
-  "data": {
-    "deleteConversation": false
-  }
-}
-```
-
----
-
-## REST Endpoints
-
-### Health Check Endpoint
-
-Simple REST endpoint for health monitoring.
-
-**Endpoint:**
-```
-GET http://localhost:8080/api/health
-```
-
-**Response:**
-```json
-{
-  "status": "healthy",
-  "ollama_connected": true,
-  "timestamp": "2024-03-26T10:00:00.000Z"
-}
-```
-
----
-
-### Web UI Endpoint
-
-Serves the web interface.
-
-**Endpoint:**
-```
-GET http://localhost:8080/
-```
-
-**Response:** HTML page with embedded JavaScript and CSS
-
----
-
-## Data Types
-
-### Conversation
-
-```typescript
-type Conversation {
-  id: ID!              // Unique identifier (e.g., "conv_1")
-  title: String!       // Conversation title
-  model: String!       // Ollama model name (e.g., "llama2")
-  createdAt: String!   // ISO 8601 timestamp
-  messages: [Message!]! // Array of messages
-}
-```
-
-### Message
-
-```typescript
-type Message {
-  id: ID!           // Unique identifier (e.g., "msg_1")
-  role: String!     // "user" or "assistant"
-  content: String!  // Message content
-  timestamp: String! // ISO 8601 timestamp
-}
-```
-
-### HealthStatus
-
-```typescript
-type HealthStatus {
-  status: String!          // "healthy" or "unhealthy"
-  ollamaConnected: Boolean! // Ollama connection status
-  timestamp: String!        // ISO 8601 timestamp
+  "doc_id": "doc:Document_Title",
+  "embedding": [0.123, -0.456, ...] -- 384 dimensions
 }
 ```
 
@@ -408,198 +284,28 @@ type HealthStatus {
 
 ## Error Handling
 
-### GraphQL Errors
+All endpoints return appropriate HTTP status codes and error messages in JSON format.
 
-GraphQL errors follow this format:
+### Common Error Responses
 
+**400 Bad Request**:
 ```json
 {
-  "errors": [
-    {
-      "message": "Error description here"
-    }
-  ]
+  "error": "Title and content are required"
 }
 ```
 
-### Common Error Scenarios
-
-#### 1. Conversation Not Found
+**500 Internal Server Error**:
 ```json
 {
-  "errors": [
-    {
-      "message": "Conversation conv_999 not found"
-    }
-  ]
+  "error": "GraphRAG not initialized"
 }
 ```
 
-#### 2. Ollama Connection Error
+**LLM Error** (in query response):
 ```json
 {
-  "data": {
-    "sendMessage": {
-      "id": "msg_5",
-      "role": "assistant",
-      "content": "Error communicating with Ollama: Connection refused",
-      "timestamp": "2024-03-26T10:00:00.000Z"
-    }
-  }
-}
-```
-
-#### 3. Invalid Query
-```json
-{
-  "errors": [
-    {
-      "message": "Query not supported"
-    }
-  ]
-}
-```
-
----
-
-## Examples
-
-### Complete Workflow Example
-
-#### 1. Check Health
-
-```bash
-curl -X POST http://localhost:8080/graphql \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "{ health { status ollamaConnected } }"
-  }'
-```
-
-#### 2. Get Available Models
-
-```bash
-curl -X POST http://localhost:8080/graphql \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "{ availableModels }"
-  }'
-```
-
-#### 3. Create Conversation
-
-```bash
-curl -X POST http://localhost:8080/graphql \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "mutation($title: String!, $model: String!) { createConversation(title: $title, model: $model) { id title model } }",
-    "variables": {
-      "title": "Test Chat",
-      "model": "llama2"
-    }
-  }'
-```
-
-#### 4. Send Message
-
-```bash
-curl -X POST http://localhost:8080/graphql \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "mutation($conversationId: ID!, $content: String!) { sendMessage(conversationId: $conversationId, content: $content) { id role content } }",
-    "variables": {
-      "conversationId": "conv_2",
-      "content": "Hello, how are you?"
-    }
-  }'
-```
-
-#### 5. Get All Conversations
-
-```bash
-curl -X POST http://localhost:8080/graphql \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "{ conversations { id title messages { role content } } }"
-  }'
-```
-
-#### 6. Delete Conversation
-
-```bash
-curl -X POST http://localhost:8080/graphql \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "mutation($id: ID!) { deleteConversation(id: $id) }",
-    "variables": {
-      "id": "conv_2"
-    }
-  }'
-```
-
----
-
-### JavaScript/Fetch Examples
-
-#### Query Example
-
-```javascript
-async function getConversations() {
-  const response = await fetch('http://localhost:8080/graphql', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      query: `
-        query {
-          conversations {
-            id
-            title
-            messages {
-              role
-              content
-            }
-          }
-        }
-      `
-    })
-  });
-  
-  const data = await response.json();
-  return data.data.conversations;
-}
-```
-
-#### Mutation Example
-
-```javascript
-async function sendMessage(conversationId, content) {
-  const response = await fetch('http://localhost:8080/graphql', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      query: `
-        mutation($conversationId: ID!, $content: String!) {
-          sendMessage(conversationId: $conversationId, content: $content) {
-            id
-            role
-            content
-            timestamp
-          }
-        }
-      `,
-      variables: {
-        conversationId,
-        content
-      }
-    })
-  });
-  
-  const data = await response.json();
-  return data.data.sendMessage;
+  "answer": "[LLM error: Connection refused]"
 }
 ```
 
@@ -607,51 +313,147 @@ async function sendMessage(conversationId, content) {
 
 ## Rate Limiting
 
-Currently, there is no rate limiting implemented. For production use, consider implementing:
-
-- Request rate limiting per IP
-- Concurrent request limits
-- Message size limits
-- Conversation count limits per user
+Currently, no rate limiting is implemented. For production use, consider implementing rate limiting middleware.
 
 ---
 
-## Best Practices
+## Authentication
 
-1. **Always check health before operations**
-   - Verify Ollama connectivity
-   - Handle disconnection gracefully
-
-2. **Handle errors appropriately**
-   - Check for `errors` field in responses
-   - Provide user-friendly error messages
-
-3. **Use variables for mutations**
-   - Safer than string interpolation
-   - Better type checking
-
-4. **Implement timeouts**
-   - Ollama responses can take time
-   - Set appropriate timeout values
-
-5. **Cache responses when appropriate**
-   - Available models list
-   - Conversation metadata
+Currently, no authentication is required. For production use, implement authentication middleware.
 
 ---
 
-## Versioning
+## CORS
 
-Current API Version: **1.0.0**
+CORS is not configured by default. To enable CORS for cross-origin requests, install and configure Flask-CORS:
 
-The API follows semantic versioning. Breaking changes will result in a major version bump.
+```python
+from flask_cors import CORS
+CORS(app)
+```
 
 ---
 
-## Support
+## WebSocket Support
 
-For issues or questions about the API:
-1. Check this documentation
-2. Review the architecture documentation
-3. Check application logs: `tail -f app.log`
-4. Verify Ollama is running: `curl http://localhost:11434/api/tags`
+WebSocket support is not currently implemented. For real-time updates, consider implementing Server-Sent Events (SSE) or WebSocket connections.
+
+---
+
+## Batch Operations
+
+### Batch Document Ingestion
+
+To ingest multiple documents, make multiple POST requests to `/api/ingest` or `/api/ingest/file`.
+
+**Example Script**:
+```python
+import requests
+
+documents = [
+    {"title": "Doc 1", "content": "Content 1"},
+    {"title": "Doc 2", "content": "Content 2"},
+]
+
+for doc in documents:
+    response = requests.post(
+        "http://localhost:8080/api/ingest",
+        json=doc
+    )
+    print(response.json())
+```
+
+---
+
+## Performance Tips
+
+1. **Batch Ingestion**: Ingest documents in batches during off-peak hours
+2. **Cache Results**: Cache frequently asked questions
+3. **Limit Context**: Adjust `k` parameter in vector search for faster queries
+4. **Disable LLM**: Set `use_llm: false` for faster context-only retrieval
+5. **Optimize Embeddings**: Use smaller embedding models for faster processing
+
+---
+
+## Python Client Example
+
+```python
+import requests
+
+class GraphRAGClient:
+    def __init__(self, base_url="http://localhost:8080"):
+        self.base_url = base_url
+    
+    def health(self):
+        return requests.get(f"{self.base_url}/api/health").json()
+    
+    def stats(self):
+        return requests.get(f"{self.base_url}/api/stats").json()
+    
+    def ingest(self, title, content):
+        return requests.post(
+            f"{self.base_url}/api/ingest",
+            json={"title": title, "content": content}
+        ).json()
+    
+    def query(self, question, use_llm=True):
+        return requests.post(
+            f"{self.base_url}/api/query",
+            json={"question": question, "use_llm": use_llm}
+        ).json()
+
+# Usage
+client = GraphRAGClient()
+print(client.health())
+client.ingest("Test Doc", "This is a test document")
+result = client.query("What is this about?")
+print(result["answer"])
+```
+
+---
+
+## JavaScript Client Example
+
+```javascript
+class GraphRAGClient {
+    constructor(baseUrl = 'http://localhost:8080') {
+        this.baseUrl = baseUrl;
+    }
+    
+    async health() {
+        const response = await fetch(`${this.baseUrl}/api/health`);
+        return response.json();
+    }
+    
+    async stats() {
+        const response = await fetch(`${this.baseUrl}/api/stats`);
+        return response.json();
+    }
+    
+    async ingest(title, content) {
+        const response = await fetch(`${this.baseUrl}/api/ingest`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({title, content})
+        });
+        return response.json();
+    }
+    
+    async query(question, useLlm = true) {
+        const response = await fetch(`${this.baseUrl}/api/query`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({question, use_llm: useLlm})
+        });
+        return response.json();
+    }
+}
+
+// Usage
+const client = new GraphRAGClient();
+const health = await client.health();
+console.log(health);
+
+await client.ingest('Test Doc', 'This is a test document');
+const result = await client.query('What is this about?');
+console.log(result.answer);

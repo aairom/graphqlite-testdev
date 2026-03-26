@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GraphRAG - Knowledge Graph Q&A</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .status-bar {
+            background: white;
+            border-radius: 10px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #10b981;
+        }
+
+        .status-dot.offline {
+            background: #ef4444;
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 968px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .card h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .icon {
+            font-size: 1.2em;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        input[type="text"],
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 120px;
+            font-family: inherit;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            left: -9999px;
+        }
+
+        .file-input-label {
+            display: block;
+            padding: 12px;
+            background: #f3f4f6;
+            border: 2px dashed #d1d5db;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .file-input-label:hover {
+            background: #e5e7eb;
+            border-color: #667eea;
+        }
+
+        .file-name {
+            margin-top: 8px;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            width: 100%;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result-card {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-top: 20px;
+        }
+
+        .result-section {
+            margin-bottom: 20px;
+        }
+
+        .result-section h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+
+        .result-content {
+            background: #f9fafb;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .retrieval-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .retrieval-box {
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .retrieval-box h4 {
+            color: #667eea;
+            font-size: 0.9em;
+            margin-bottom: 8px;
+        }
+
+        .retrieval-item {
+            font-size: 0.85em;
+            color: #666;
+            padding: 4px 0;
+        }
+
+        .answer-box {
+            background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+            padding: 20px;
+            border-radius: 8px;
+            font-size: 1.1em;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .message {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .message.active {
+            display: block;
+        }
+
+        .message.success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #6ee7b7;
+        }
+
+        .message.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+        }
+
+        .context-preview {
+            max-height: 300px;
+            overflow-y: auto;
+            font-size: 0.9em;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            color: #666;
+            font-weight: 500;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.3s;
+            width: auto;
+        }
+
+        .tab:hover {
+            color: #667eea;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧠 GraphRAG Knowledge System</h1>
+            <p>Graph-based Retrieval Augmented Generation with Ollama</p>
+        </div>
+
+        <div class="status-bar">
+            <div class="status-item">
+                <div class="status-dot" id="ollamaStatus"></div>
+                <span id="ollamaText">Checking Ollama...</span>
+            </div>
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-value" id="docCount">0</div>
+                    <div class="stat-label">Documents</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="entityCount">0</div>
+                    <div class="stat-label">Entities</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="relationCount">0</div>
+                    <div class="stat-label">Relations</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="card">
+                <h2><span class="icon">📄</span> Ingest Documents</h2>
+                
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab('text')">Text Input</button>
+                    <button class="tab" onclick="switchTab('file')">File Upload</button>
+                </div>
+
+                <div id="textTab" class="tab-content active">
+                    <div class="message" id="ingestMessage"></div>
+                    
+                    <form id="ingestForm">
+                        <div class="form-group">
+                            <label for="docTitle">Document Title</label>
+                            <input type="text" id="docTitle" placeholder="Enter document title" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="docContent">Document Content</label>
+                            <textarea id="docContent" placeholder="Enter document content" required></textarea>
+                        </div>
+                        
+                        <button type="submit">Ingest Document</button>
+                    </form>
+                </div>
+
+                <div id="fileTab" class="tab-content">
+                    <div class="message" id="fileMessage"></div>
+                    
+                    <form id="fileForm">
+                        <div class="form-group">
+                            <label>Upload Text File (.txt)</label>
+                            <div class="file-input-wrapper">
+                                <label class="file-input-label" for="fileInput">
+                                    📁 Choose a file or drag here
+                                </label>
+                                <input type="file" id="fileInput" accept=".txt">
+                            </div>
+                            <div class="file-name" id="fileName"></div>
+                        </div>
+                        
+                        <button type="submit">Upload & Ingest</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2><span class="icon">💬</span> Ask Questions</h2>
+                
+                <div class="message" id="queryMessage"></div>
+                
+                <form id="queryForm">
+                    <div class="form-group">
+                        <label for="question">Your Question</label>
+                        <input type="text" id="question" placeholder="Ask a question about your documents" required>
+                    </div>
+                    
+                    <button type="submit">Get Answer</button>
+                </form>
+
+                <div class="loading" id="queryLoading">
+                    <div class="spinner"></div>
+                    <p>Processing your question...</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="result-card" id="resultCard" style="display: none;">
+            <div class="result-section">
+                <h3>📊 Retrieval Information</h3>
+                <div class="retrieval-info" id="retrievalInfo"></div>
+            </div>
+
+            <div class="result-section">
+                <h3>📝 Context Retrieved</h3>
+                <div class="result-content context-preview" id="contextPreview"></div>
+            </div>
+
+            <div class="result-section">
+                <h3>💡 Answer</h3>
+                <div class="answer-box" id="answerBox"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Check health and update stats
+        async function updateStatus() {
+            try {
+                const healthRes = await fetch('/api/health');
+                const health = await healthRes.json();
+                
+                const statusDot = document.getElementById('ollamaStatus');
+                const statusText = document.getElementById('ollamaText');
+                
+                if (health.ollama_available) {
+                    statusDot.classList.remove('offline');
+                    statusText.textContent = 'Ollama Connected';
+                } else {
+                    statusDot.classList.add('offline');
+                    statusText.textContent = 'Ollama Offline';
+                }
+
+                const statsRes = await fetch('/api/stats');
+                const stats = await statsRes.json();
+                
+                document.getElementById('docCount').textContent = stats.documents || 0;
+                document.getElementById('entityCount').textContent = stats.entities || 0;
+                document.getElementById('relationCount').textContent = stats.relationships || 0;
+            } catch (error) {
+                console.error('Error updating status:', error);
+            }
+        }
+
+        // Switch between tabs
+        function switchTab(tab) {
+            const tabs = document.querySelectorAll('.tab');
+            const contents = document.querySelectorAll('.tab-content');
+            
+            tabs.forEach(t => t.classList.remove('active'));
+            contents.forEach(c => c.classList.remove('active'));
+            
+            if (tab === 'text') {
+                tabs[0].classList.add('active');
+                document.getElementById('textTab').classList.add('active');
+            } else {
+                tabs[1].classList.add('active');
+                document.getElementById('fileTab').classList.add('active');
+            }
+        }
+
+        // Show message
+        function showMessage(elementId, message, type) {
+            const el = document.getElementById(elementId);
+            el.textContent = message;
+            el.className = `message ${type} active`;
+            setTimeout(() => el.classList.remove('active'), 5000);
+        }
+
+        // Handle file input
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const fileName = e.target.files[0]?.name || '';
+            document.getElementById('fileName').textContent = fileName ? `Selected: ${fileName}` : '';
+        });
+
+        // Handle text ingest
+        document.getElementById('ingestForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const title = document.getElementById('docTitle').value;
+            const content = document.getElementById('docContent').value;
+            
+            try {
+                const response = await fetch('/api/ingest', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({title, content})
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage('ingestMessage', `Document "${result.title}" ingested successfully! Extracted ${result.entities_extracted} entities.`, 'success');
+                    document.getElementById('ingestForm').reset();
+                    updateStatus();
+                } else {
+                    showMessage('ingestMessage', `Error: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showMessage('ingestMessage', `Error: ${error.message}`, 'error');
+            }
+        });
+
+        // Handle file upload
+        document.getElementById('fileForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showMessage('fileMessage', 'Please select a file', 'error');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const response = await fetch('/api/ingest/file', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage('fileMessage', `File "${result.title}" ingested successfully! Extracted ${result.entities_extracted} entities.`, 'success');
+                    document.getElementById('fileForm').reset();
+                    document.getElementById('fileName').textContent = '';
+                    updateStatus();
+                } else {
+                    showMessage('fileMessage', `Error: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showMessage('fileMessage', `Error: ${error.message}`, 'error');
+            }
+        });
+
+        // Handle query
+        document.getElementById('queryForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const question = document.getElementById('question').value;
+            const loading = document.getElementById('queryLoading');
+            const resultCard = document.getElementById('resultCard');
+            
+            loading.classList.add('active');
+            resultCard.style.display = 'none';
+            
+            try {
+                const response = await fetch('/api/query', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({question, use_llm: true})
+                });
+                
+                const result = await response.json();
+                
+                if (result.error) {
+                    showMessage('queryMessage', `Error: ${result.error}`, 'error');
+                    return;
+                }
+                
+                // Display retrieval info
+                const retrievalInfo = document.getElementById('retrievalInfo');
+                retrievalInfo.innerHTML = '';
+                
+                if (result.retrieval_info.vector_search.length > 0) {
+                    const box = document.createElement('div');
+                    box.className = 'retrieval-box';
+                    box.innerHTML = `<h4>Vector Search</h4>`;
+                    result.retrieval_info.vector_search.forEach(item => {
+                        box.innerHTML += `<div class="retrieval-item">📄 ${item.title} (${item.distance.toFixed(4)})</div>`;
+                    });
+                    retrievalInfo.appendChild(box);
+                }
+                
+                if (result.retrieval_info.graph_traversal.length > 0) {
+                    const box = document.createElement('div');
+                    box.className = 'retrieval-box';
+                    box.innerHTML = `<h4>Graph Traversal</h4>`;
+                    result.retrieval_info.graph_traversal.forEach(item => {
+                        box.innerHTML += `<div class="retrieval-item">🔗 ${item.title}</div>`;
+                    });
+                    retrievalInfo.appendChild(box);
+                }
+                
+                if (result.retrieval_info.community.length > 0) {
+                    const box = document.createElement('div');
+                    box.className = 'retrieval-box';
+                    box.innerHTML = `<h4>Community Detection</h4>`;
+                    result.retrieval_info.community.forEach(item => {
+                        box.innerHTML += `<div class="retrieval-item">🌐 ${item.title} (C${item.community_id})</div>`;
+                    });
+                    retrievalInfo.appendChild(box);
+                }
+                
+                // Display context
+                document.getElementById('contextPreview').textContent = result.context || 'No context retrieved';
+                
+                // Display answer
+                document.getElementById('answerBox').textContent = result.answer || 'No answer generated';
+                
+                resultCard.style.display = 'block';
+                resultCard.scrollIntoView({behavior: 'smooth'});
+                
+            } catch (error) {
+                showMessage('queryMessage', `Error: ${error.message}`, 'error');
+            } finally {
+                loading.classList.remove('active');
+            }
+        });
+
+        // Initial status update
+        updateStatus();
+        setInterval(updateStatus, 10000); // Update every 10 seconds
+    </script>
+</body>
+</html>

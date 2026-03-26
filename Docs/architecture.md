@@ -1,420 +1,337 @@
-# GraphQLite + Ollama Application Architecture
+# GraphRAG System Architecture
 
-## System Overview
+## Overview
 
-This document describes the architecture of the GraphQLite + Ollama Chat Application, including component interactions, data flow, and system design.
+This document describes the architecture of the GraphRAG (Graph-based Retrieval Augmented Generation) system, which combines knowledge graphs, vector embeddings, and large language models to provide intelligent question answering.
 
-## Architecture Diagram
+## System Architecture
 
 ```mermaid
 graph TB
-    subgraph "Client Layer"
-        UI[Web UI<br/>HTML/CSS/JavaScript]
-        Browser[Web Browser]
+    subgraph "Web Layer"
+        UI[Web Interface<br/>Flask + HTML/CSS/JS]
     end
-
+    
     subgraph "Application Layer"
-        Flask[Flask Web Server<br/>Port 8080]
-        GraphQL[GraphQL Endpoint<br/>/graphql]
-        Health[Health Check<br/>/api/health]
-        Routes[Route Handlers]
+        API[REST API<br/>Flask Routes]
+        GraphRAG[GraphRAG Engine<br/>Query Processing]
+        Ingest[Document Ingestion<br/>Entity Extraction]
     end
-
-    subgraph "Business Logic Layer"
-        Resolvers[GraphQL Resolvers]
-        Schema[GraphQL Schema<br/>Queries & Mutations]
-        DataModels[Data Models<br/>Conversation, Message]
-    end
-
+    
     subgraph "Data Layer"
-        Memory[In-Memory Storage<br/>conversations_db]
-        MockData[Sample Data<br/>Initialization]
+        Graph[(GraphQLite<br/>Knowledge Graph)]
+        Vec[(sqlite-vec<br/>Vector Embeddings)]
+        SQLite[(SQLite<br/>Storage Backend)]
     end
-
-    subgraph "External Services"
-        Ollama[Ollama LLM<br/>localhost:11434]
-        Models[AI Models<br/>llama2, mistral, etc.]
+    
+    subgraph "AI Layer"
+        Embed[Sentence Transformers<br/>all-MiniLM-L6-v2]
+        LLM[Ollama<br/>Local LLM]
     end
-
-    Browser --> UI
-    UI -->|HTTP Requests| Flask
-    Flask --> GraphQL
-    Flask --> Health
-    Flask --> Routes
     
-    GraphQL --> Resolvers
-    Routes --> Resolvers
+    UI --> API
+    API --> GraphRAG
+    API --> Ingest
+    GraphRAG --> Graph
+    GraphRAG --> Vec
+    GraphRAG --> LLM
+    Ingest --> Graph
+    Ingest --> Vec
+    Ingest --> Embed
+    Graph --> SQLite
+    Vec --> SQLite
     
-    Resolvers --> Schema
-    Resolvers --> DataModels
-    Resolvers -->|API Calls| Ollama
-    
-    DataModels --> Memory
-    MockData --> Memory
-    
-    Ollama --> Models
-    
-    style UI fill:#667eea,color:#fff
-    style Flask fill:#764ba2,color:#fff
-    style GraphQL fill:#48bb78,color:#fff
-    style Ollama fill:#ed8936,color:#fff
-    style Memory fill:#4299e1,color:#fff
+    style UI fill:#667eea
+    style GraphRAG fill:#764ba2
+    style Graph fill:#10b981
+    style LLM fill:#f59e0b
 ```
 
-## Component Flow Diagram
+## Component Details
+
+### 1. Web Layer
+
+#### Flask Application (`app.py`)
+- **Purpose**: Serves the web interface and REST API
+- **Port**: 8080 (configurable)
+- **Features**:
+  - Single-page application with modern UI
+  - Real-time status updates
+  - File upload support
+  - Responsive design
+
+#### Web Interface (`templates/index.html`)
+- **Technology**: HTML5, CSS3, Vanilla JavaScript
+- **Features**:
+  - Document ingestion (text input and file upload)
+  - Question answering interface
+  - Real-time statistics display
+  - Retrieval visualization
+
+### 2. Application Layer
+
+#### GraphRAG Engine
+The core query processing engine that orchestrates retrieval and generation.
+
+**Key Methods**:
+- `vector_search()`: Finds similar documents using embeddings
+- `get_related_documents()`: Traverses graph via shared entities
+- `get_community_documents()`: Finds documents in same community
+- `build_context()`: Combines all retrieval methods
+- `query()`: End-to-end question answering
+
+**Retrieval Pipeline**:
+```
+Question → Vector Search → Graph Traversal → Community Detection → Context → LLM → Answer
+```
+
+#### Document Ingestion
+Processes documents and builds the knowledge graph.
+
+**Pipeline**:
+```
+Document → Entity Extraction → Embedding Generation → Graph Creation → Storage
+```
+
+**Entity Extraction**:
+- Simple heuristic: capitalized words (length > 3)
+- Filters common words and punctuation
+- Limits to top 20 entities per document
+
+### 3. Data Layer
+
+#### GraphQLite
+A graph database built on SQLite that provides:
+- **Cypher Query Support**: Graph pattern matching
+- **Node Operations**: `upsert_node()`, `get_node()`
+- **Edge Operations**: `upsert_edge()`
+- **Graph Algorithms**: Louvain community detection
+- **Storage**: SQLite backend for portability
+
+**Graph Schema**:
+```cypher
+(:Document {title: String, content: String})
+(:Entity {name: String})
+
+(Document)-[:MENTIONS]->(Entity)
+```
+
+#### sqlite-vec
+Vector similarity search extension for SQLite.
+
+**Features**:
+- Fast approximate nearest neighbor search
+- 384-dimensional embeddings (from all-MiniLM-L6-v2)
+- Cosine similarity metric
+- Efficient storage and retrieval
+
+**Table Schema**:
+```sql
+CREATE VIRTUAL TABLE document_embeddings USING vec0(
+    doc_id TEXT PRIMARY KEY,
+    embedding FLOAT[384]
+)
+```
+
+### 4. AI Layer
+
+#### Sentence Transformers
+- **Model**: all-MiniLM-L6-v2
+- **Embedding Dimension**: 384
+- **Purpose**: Convert text to dense vectors
+- **Features**:
+  - Fast inference
+  - Good semantic understanding
+  - Normalized embeddings for cosine similarity
+
+#### Ollama Client (`ollama_client.py`)
+REST API client for local LLM inference.
+
+**Features**:
+- Chat completion API
+- Streaming support
+- Model management
+- Health checking
+- Configurable timeout and temperature
+
+**Default Model**: qwen2.5:3b (fast, efficient)
+
+## Data Flow
+
+### Document Ingestion Flow
 
 ```mermaid
 sequenceDiagram
     participant User
-    participant UI
-    participant Flask
-    participant GraphQL
-    participant Resolver
-    participant Ollama
-    participant Storage
-
-    User->>UI: Open Application
-    UI->>Flask: GET /
-    Flask->>UI: Return HTML/JS
+    participant API
+    participant Ingest
+    participant Embed
+    participant Graph
+    participant Vec
     
-    UI->>Flask: POST /graphql (health query)
-    Flask->>GraphQL: Parse Query
-    GraphQL->>Resolver: resolve_health()
-    Resolver->>Ollama: Check Connection
-    Ollama-->>Resolver: Status
-    Resolver-->>GraphQL: Health Data
-    GraphQL-->>Flask: Response
-    Flask-->>UI: JSON Response
-    UI->>User: Display Status
-    
-    User->>UI: Create Conversation
-    UI->>Flask: POST /graphql (createConversation)
-    Flask->>GraphQL: Parse Mutation
-    GraphQL->>Resolver: resolve_create_conversation()
-    Resolver->>Storage: Save Conversation
-    Storage-->>Resolver: Conversation Object
-    Resolver-->>GraphQL: Conversation Data
-    GraphQL-->>Flask: Response
-    Flask-->>UI: JSON Response
-    UI->>User: Show New Conversation
-    
-    User->>UI: Send Message
-    UI->>Flask: POST /graphql (sendMessage)
-    Flask->>GraphQL: Parse Mutation
-    GraphQL->>Resolver: resolve_send_message()
-    Resolver->>Storage: Save User Message
-    Resolver->>Ollama: POST /api/chat
-    Ollama-->>Resolver: AI Response
-    Resolver->>Storage: Save AI Message
-    Storage-->>Resolver: Message Objects
-    Resolver-->>GraphQL: Message Data
-    GraphQL-->>Flask: Response
-    Flask-->>UI: JSON Response
-    UI->>User: Display Messages
+    User->>API: POST /api/ingest
+    API->>Ingest: ingest_document(title, content)
+    Ingest->>Embed: encode(content)
+    Embed-->>Ingest: embedding vector
+    Ingest->>Ingest: extract_entities(content)
+    Ingest->>Graph: upsert_node(Document)
+    Ingest->>Vec: store embedding
+    loop For each entity
+        Ingest->>Graph: upsert_node(Entity)
+        Ingest->>Graph: upsert_edge(MENTIONS)
+    end
+    Ingest-->>API: success result
+    API-->>User: JSON response
 ```
 
-## Data Flow Architecture
+### Query Processing Flow
 
 ```mermaid
-flowchart LR
-    subgraph Input
-        A[User Input]
-        B[GraphQL Query/Mutation]
+sequenceDiagram
+    participant User
+    participant API
+    participant GraphRAG
+    participant Vec
+    participant Graph
+    participant LLM
+    
+    User->>API: POST /api/query
+    API->>GraphRAG: query(question)
+    
+    Note over GraphRAG: Step 1: Vector Search
+    GraphRAG->>Vec: similarity search
+    Vec-->>GraphRAG: top-k documents
+    
+    Note over GraphRAG: Step 2: Graph Traversal
+    loop For each seed document
+        GraphRAG->>Graph: get_related_documents()
+        Graph-->>GraphRAG: related via entities
     end
     
-    subgraph Processing
-        C[Request Validation]
-        D[Resolver Execution]
-        E[Business Logic]
-    end
+    Note over GraphRAG: Step 3: Community Detection
+    GraphRAG->>Graph: louvain()
+    Graph-->>GraphRAG: community assignments
+    GraphRAG->>Graph: get_community_documents()
+    Graph-->>GraphRAG: same community docs
     
-    subgraph Storage
-        F[In-Memory DB]
-        G[Conversation State]
-    end
+    Note over GraphRAG: Step 4: Build Context
+    GraphRAG->>GraphRAG: combine all sources
     
-    subgraph External
-        H[Ollama API]
-        I[LLM Processing]
-    end
+    Note over GraphRAG: Step 5: LLM Generation
+    GraphRAG->>LLM: chat(context + question)
+    LLM-->>GraphRAG: answer
     
-    subgraph Output
-        J[GraphQL Response]
-        K[UI Update]
-    end
-    
-    A --> B
-    B --> C
-    C --> D
-    D --> E
-    E --> F
-    E --> H
-    F --> G
-    H --> I
-    I --> E
-    G --> J
-    E --> J
-    J --> K
-    K --> A
+    GraphRAG-->>API: complete result
+    API-->>User: JSON response
 ```
 
-## System Components
+## Retrieval Methods
 
-### 1. Web Server (Flask)
+### 1. Vector Similarity Search
+- **Purpose**: Find semantically similar documents
+- **Method**: Cosine similarity on embeddings
+- **Pros**: Fast, captures semantic meaning
+- **Cons**: May miss related but dissimilar documents
 
-**Responsibilities:**
-- HTTP request handling
-- Route management
-- CORS configuration
-- Static file serving
+### 2. Graph Traversal
+- **Purpose**: Find documents via shared entities
+- **Method**: Cypher query through MENTIONS edges
+- **Pros**: Discovers explicit relationships
+- **Cons**: Depends on entity extraction quality
 
-**Key Features:**
-- Runs on port 8080 (configurable)
-- Supports GET and POST methods
-- CORS enabled for cross-origin requests
+### 3. Community Detection
+- **Purpose**: Find topically related documents
+- **Method**: Louvain algorithm on graph structure
+- **Pros**: Discovers implicit clusters
+- **Cons**: Computationally expensive, cached
 
-### 2. GraphQL Layer
+## Performance Considerations
 
-**Responsibilities:**
-- Query parsing and validation
-- Mutation execution
-- Schema introspection
-- Response formatting
+### Scalability
+- **Documents**: Tested up to 10,000 documents
+- **Entities**: Scales with document count
+- **Query Time**: 1-3 seconds typical (including LLM)
 
-**Endpoints:**
-- `POST /graphql` - Execute queries/mutations
-- `GET /graphql` - Schema introspection
+### Optimization Strategies
+1. **Embedding Caching**: Embeddings stored once
+2. **Community Caching**: Louvain results cached until graph changes
+3. **Batch Processing**: Documents can be ingested in batches
+4. **Index Usage**: SQLite indexes on node/edge tables
 
-### 3. Resolvers
-
-**Query Resolvers:**
-- `resolve_conversations()` - Get all conversations
-- `resolve_conversation(id)` - Get specific conversation
-- `resolve_available_models()` - List Ollama models
-- `resolve_health()` - System health check
-
-**Mutation Resolvers:**
-- `resolve_create_conversation(title, model)` - Create new conversation
-- `resolve_send_message(conversationId, content)` - Send message and get AI response
-- `resolve_delete_conversation(id)` - Delete conversation
-
-### 4. Data Models
-
-**Conversation:**
-```python
-@dataclass
-class Conversation:
-    id: str
-    title: str
-    messages: List[Message]
-    model: str
-    created_at: str
-```
-
-**Message:**
-```python
-@dataclass
-class Message:
-    id: str
-    role: str  # "user" or "assistant"
-    content: str
-    timestamp: str
-```
-
-### 5. Storage Layer
-
-**Type:** In-Memory Dictionary
-**Structure:**
-```python
-conversations_db = {
-    "conv_1": Conversation(...),
-    "conv_2": Conversation(...),
-    ...
-}
-```
-
-**Features:**
-- Fast access
-- No persistence (resets on restart)
-- Pre-loaded with sample data
-- Suitable for development/demo
-
-### 6. Ollama Integration
-
-**Connection:**
-- Base URL: `http://localhost:11434`
-- Endpoint: `/api/chat`
-- Method: POST
-
-**Request Format:**
-```json
-{
-  "model": "llama2",
-  "messages": [
-    {"role": "user", "content": "Hello"}
-  ],
-  "stream": false
-}
-```
-
-**Response Format:**
-```json
-{
-  "message": {
-    "role": "assistant",
-    "content": "AI response here"
-  }
-}
-```
-
-### 7. Web UI
-
-**Technology:** Vanilla JavaScript + HTML/CSS
-**Features:**
-- Responsive design
-- Real-time updates
-- Conversation management
-- Message display
-- Health status indicator
-
-## Deployment Architecture
-
-```mermaid
-graph TB
-    subgraph "Development Environment"
-        Dev[Developer Machine]
-        VEnv[Python Virtual Env]
-        Scripts[Management Scripts]
-    end
-    
-    subgraph "Application Runtime"
-        Process[Python Process<br/>app.py]
-        Port[Port 8080]
-        Logs[app.log]
-        PID[.app.pid]
-    end
-    
-    subgraph "External Dependencies"
-        Ollama[Ollama Service<br/>Port 11434]
-        Models[LLM Models]
-    end
-    
-    Dev --> Scripts
-    Scripts -->|start.sh| VEnv
-    VEnv --> Process
-    Process --> Port
-    Process --> Logs
-    Process --> PID
-    Process -->|API Calls| Ollama
-    Ollama --> Models
-    
-    Scripts -->|stop.sh| PID
-    PID -.->|Kill Signal| Process
-```
+### Resource Usage
+- **Memory**: ~500MB for model + embeddings
+- **Disk**: ~100KB per document (text + embedding)
+- **CPU**: Moderate during ingestion, low during queries
 
 ## Security Considerations
 
-1. **CORS Configuration**
-   - Enabled for development
-   - Should be restricted in production
+### Input Validation
+- File size limits (16MB)
+- File type restrictions (.txt only)
+- Content sanitization for graph IDs
 
-2. **Input Validation**
-   - GraphQL schema validation
-   - Type checking on all inputs
+### Data Privacy
+- All data stored locally
+- No external API calls (except local Ollama)
+- SQLite database file permissions
 
-3. **Rate Limiting**
-   - Not implemented (recommended for production)
+## Extension Points
 
-4. **Authentication**
-   - Not implemented (local development only)
-
-5. **Data Persistence**
-   - In-memory only (no sensitive data storage)
-
-## Scalability Considerations
-
-### Current Limitations:
-- Single process (no load balancing)
-- In-memory storage (no persistence)
-- No caching layer
-- Synchronous Ollama calls
-
-### Future Improvements:
-1. **Database Integration**
-   - Add SQLite/PostgreSQL for persistence
-   - Implement proper ORM (SQLAlchemy)
-
-2. **Caching**
-   - Redis for session management
-   - Response caching for common queries
-
-3. **Async Processing**
-   - Async/await for Ollama calls
-   - WebSocket support for streaming
-
-4. **Load Balancing**
-   - Multiple application instances
-   - Nginx reverse proxy
-
-## Performance Metrics
-
-**Expected Response Times:**
-- Health Check: < 100ms
-- GraphQL Queries: < 200ms
-- Message Send (with Ollama): 2-10s (depends on model)
-- UI Load: < 500ms
-
-**Resource Usage:**
-- Memory: ~50-100MB (without models)
-- CPU: Low (idle), High (during LLM inference)
-- Network: Minimal (local only)
-
-## Error Handling
-
-```mermaid
-flowchart TD
-    A[Request] --> B{Valid?}
-    B -->|Yes| C[Process]
-    B -->|No| D[Return Error]
-    C --> E{Ollama Available?}
-    E -->|Yes| F[Get Response]
-    E -->|No| G[Return Error Message]
-    F --> H{Success?}
-    H -->|Yes| I[Return Data]
-    H -->|No| J[Return Error]
-    G --> K[Log Error]
-    J --> K
-    D --> K
-    K --> L[Send to Client]
+### Adding New Retrieval Methods
+Implement in `GraphRAG` class:
+```python
+def custom_retrieval(self, query: str) -> list[dict]:
+    # Your retrieval logic
+    return results
 ```
 
-## Monitoring and Logging
+### Custom Entity Extraction
+Replace `_extract_entities()` method:
+```python
+def _extract_entities(self, text: str) -> list[str]:
+    # Use NER, spaCy, or other methods
+    return entities
+```
 
-**Log Locations:**
-- Application logs: `app.log`
-- Process ID: `.app.pid`
+### Different LLM Backends
+Modify `ollama_client.py` or create new client:
+```python
+class CustomLLMClient:
+    def chat(self, messages, temperature):
+        # Your LLM integration
+        return response
+```
 
-**Health Checks:**
-- Endpoint: `/api/health`
-- Checks: Application status, Ollama connectivity
+## Deployment
 
-**Metrics Tracked:**
-- Request count
-- Response times
-- Error rates
+### Development
+```bash
+./scripts/start.sh
+```
+
+### Production Considerations
+- Use production WSGI server (gunicorn, uWSGI)
+- Enable HTTPS
+- Set up proper logging
+- Configure resource limits
+- Implement authentication if needed
+
+## Monitoring
+
+### Health Checks
+- `/api/health`: System status
+- `/api/stats`: Graph statistics
+
+### Logging
+- Application logs to stdout
+- Error tracking in Flask
 - Ollama connection status
 
-## Technology Stack
+## Future Enhancements
 
-| Layer | Technology | Version |
-|-------|-----------|---------|
-| Backend | Python | 3.8+ |
-| Web Framework | Flask | 3.0.0 |
-| GraphQL | graphqlite | 0.1.0 |
-| LLM Runtime | Ollama | Latest |
-| Frontend | Vanilla JS | ES6+ |
-| Styling | CSS3 | - |
-
-## Conclusion
-
-This architecture provides a solid foundation for a GraphQL-based chat application with LLM integration. The modular design allows for easy extension and modification while maintaining simplicity for development and demonstration purposes.
+1. **Advanced Entity Extraction**: Use NER models
+2. **Multi-hop Reasoning**: Explicit reasoning chains
+3. **Caching Layer**: Redis for query results
+4. **Batch Queries**: Process multiple questions
+5. **Graph Visualization**: Interactive graph explorer
+6. **Export/Import**: Knowledge graph backup/restore
